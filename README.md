@@ -8,7 +8,7 @@ I'm not affiliated with Bitwarden. Use it at your own risk, and read the code be
 
 ## Why this exists
 
-I used to have a small bash script (still kept in `reference/bitwarden-tui.sh`) that unlocked the vault, listed items through `fzf`, and copied the selected password to the clipboard. It worked, but it could only do one thing. I wanted something that could also log in from scratch, talk to my self-hosted server, sync, browse folders, and generate passwords, without turning the bash script into an unreadable mess. So I rewrote it in Rust.
+I used to have a small bash script (still kept in `reference/bw-tui.sh`) that unlocked the vault, listed items through `fzf`, and copied the selected password to the clipboard. It worked, but it could only do one thing. I wanted something that could also log in from scratch, talk to my self-hosted server, sync, browse folders, and generate passwords, without turning the bash script into an unreadable mess. So I rewrote it in Rust.
 
 ## Features
 
@@ -40,7 +40,7 @@ cargo build --release
 
 ## Configuration
 
-On first run (Rust binary or `reference/bitwarden-tui.sh`, whichever you launch first) it creates `~/.config/bw-tui/config.json` — or `$XDG_CONFIG_HOME/bw-tui/config.json` if that's set — with these defaults:
+On first run (Rust binary or `reference/bw-tui.sh`, whichever you launch first) it creates `~/.config/bw-tui/config.json` — or `$XDG_CONFIG_HOME/bw-tui/config.json` if that's set — with these defaults:
 
 ```json
 {
@@ -68,27 +68,27 @@ The file is plain JSON on purpose: the Rust side already depends on `serde_json`
 
 **Vault tab** (normal mode)
 
-| Key | Action |
-| --- | --- |
-| `j` / `k` or ↓ / ↑ | move selection |
-| `gg` / `G` | jump to top / bottom |
-| `f` | show/hide the folder bar |
-| `h` / `l` | previous / next folder |
-| `/` | enter search mode |
-| `Enter` | open the item detail popup |
-| `R` or `F5` | refresh the item list |
-| `q` / `Esc` | quit (`Esc` clears an active filter first) |
+| Key                | Action                                     |
+| ------------------ | ------------------------------------------ |
+| `j` / `k` or ↓ / ↑ | move selection                             |
+| `gg` / `G`         | jump to top / bottom                       |
+| `f`                | show/hide the folder bar                   |
+| `h` / `l`          | previous / next folder                     |
+| `/`                | enter search mode                          |
+| `Enter`            | open the item detail popup                 |
+| `R` or `F5`        | refresh the item list                      |
+| `q` / `Esc`        | quit (`Esc` clears an active filter first) |
 
 **Item detail popup** (after pressing `Enter` on an item): shows everything about it — for a login, that's username/URL/TOTP plus the password masked; for a card, cardholder/brand/expiry plus the number masked; for a note, its full text.
 
-| Key | Action |
-| --- | --- |
+| Key     | Action                                                           |
+| ------- | ---------------------------------------------------------------- |
 | `Enter` | copy the item's "primary" secret (password / card number / note) |
-| `u` | copy username (logins) |
-| `t` | copy TOTP code (logins) |
-| `r` | reveal password or card number |
-| `n` | copy notes, if the item has any |
-| `Esc` | close the popup |
+| `u`     | copy username (logins)                                           |
+| `t`     | copy TOTP code (logins)                                          |
+| `r`     | reveal password or card number                                   |
+| `n`     | copy notes, if the item has any                                  |
+| `Esc`   | close the popup                                                  |
 
 **Search mode** (after pressing `/`): type to filter, `Enter` confirms and goes back to normal mode, `Esc` cancels and clears the filter.
 
