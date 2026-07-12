@@ -6,16 +6,13 @@ This is a personal project. I built it and use it for my own setup (Sway on Wayl
 
 ## Two versions
 
-There are two ways to use this project, in two different folders:
+There are two ways to use this project, in two different folders: a full
+Rust TUI in [`src/`](#rust-version-full), and a lite bash script in
+[`bash/`](#bash-version-lite). Both talk to the same `bw` CLI and share the
+same config file and cached session, so you can mix them.
 
-| Version  | Folder                        | What it is                                                                                                                                                |
-| -------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Rust** | [`src/`](#rust-version-full)  | The full version. A real TUI made with [ratatui](https://ratatui.rs/), with folders, item detail, password generator, account tab, config file, and more. |
-| **Bash** | [`bash/`](#bash-version-lite) | A lite version. One script that unlocks the vault, lists items with `fzf`, and copies what you pick. It does one thing, and it does it fast.              |
-
-I started with the bash script (it's still there, working). Later I wanted something that could also log in from scratch, sync, browse folders, and generate passwords, without turning the script into something hard to read. So I wrote the Rust version. The bash script is still useful if you just want a quick picker and don't want to build anything, so I kept both.
-
-Both versions read the same config file and can share the same cached session (see [Configuration](#configuration) below), so you can mix them if you want.
+See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for why both exist, how they
+relate, and design notes on the clipboard handling and session auto-lock.
 
 ---
 
@@ -29,7 +26,7 @@ Both versions read the same config file and can share the same cached session (s
 - **Vim-style keys** in the vault list: `j`/`k` to move, `gg`/`G` to jump to top/bottom, `h`/`l` to switch folders, `/` to search.
 - **Generator tab**: wraps `bw generate` with length and character-set options.
 - **Account tab**: shows the server, account email and last sync time, and lets you sync, lock or log out.
-- **Clipboard handling**: it detects at startup if it's running under WSL or a native Linux/Wayland host, and picks the right way to copy things. See [Clipboard backends](#clipboard-backends).
+- **Clipboard handling**: it detects at startup if it's running under WSL or a native Linux/Wayland host, and picks the right way to copy things. See [Clipboard backends](./ARCHITECTURE.md#clipboard-backends) in ARCHITECTURE.md.
 - **Config file**: reads `~/.config/bw-tui/config.json` and creates it with defaults on first run, instead of hardcoding things like the `bw` command, session timeout, or clipboard-clear delay. See [Configuration](#configuration).
 
 ### Requirements
@@ -49,13 +46,6 @@ On WSL2, you also need:
 
 - Windows interop enabled, so `clip.exe` can be reached from `PATH`.
 
-### Clipboard backends
-
-At startup, `clipboard::is_wsl()` checks `WSL_DISTRO_NAME`/`WSL_INTEROP`, and falls back to checking `/proc/version` for `microsoft`. That decides which backend is used every time you copy something:
-
-- **Native Wayland**: copies with `wl-copy`, and a background thread removes the secret from `cliphist` history and clears the clipboard after `clipboard_clear_secs`, sending a `notify-send` message when it does.
-- **WSL2**: copies with `clip.exe`, straight to the Windows clipboard. Autoclear does nothing here on purpose, polling the Windows clipboard would mean calling `clip.exe`/`powershell.exe` again and again across the WSL/Windows interop boundary, which is slow. So the WSL path stays simple and leaves the secret on the clipboard until you overwrite it yourself. The status line reflects this.
-
 ### Build
 
 ```sh
@@ -65,44 +55,13 @@ cargo build --release
 
 ### Keybindings
 
-**Vault tab** (normal mode)
-
-| Key                | Action                     |
-| ------------------ | -------------------------- |
-| `j` / `k` or ↓ / ↑ | move selection             |
-| `gg` / `G`         | jump to top / bottom       |
-| `f`                | show/hide the folder bar   |
-| `h` / `l`          | previous / next folder     |
-| `/`                | enter search mode          |
-| `Enter`            | open the item detail popup |
-| `R` or `F5`        | refresh the item list      |
-| `q` / `Esc`        | quit                       |
-
-**Item detail popup**: shows everything about it for a login, that's username/URL/TOTP plus the password; for a card, cardholder/brand/expiry plus the number; for a note, its full text.
-
-| Key     | Action                                                        |
-| ------- | ------------------------------------------------------------- |
-| `Enter` | copy the item's "main" secret (password / card number / note) |
-| `u`     | copy username (logins)                                        |
-| `t`     | copy TOTP code (logins)                                       |
-| `r`     | reveal password or card number                                |
-| `n`     | copy notes, if the item has any                               |
-| `Esc`   | close the popup                                               |
-
-**Search mode**: type to filter, `Enter` confirms and goes back to normal mode, `Esc` cancels and clears the filter.
-
-**Generator tab**: `u` / `l` / `n` / `s` turn character sets on/off, `↑`/`↓` change the length, `Enter` generates, `c` copies the result.
-
-**Account tab**: `s` syncs, `l` locks the vault, `o` logs out (asks for confirmation).
-
-**Anywhere in the main screen**: `Tab` / `Shift+Tab` switch between the Vault, Generator and Account tabs.
+See [`KEYBINDINGS.md`](./KEYBINDINGS.md) for the full reference (Vault tab,
+item detail popup, search mode, Generator tab, Account tab).
 
 ### Testing
 
-There's no real automated test suite for the UI itself, but:
-
-- `cargo test` runs unit tests for the plain state logic, vim motions, search mode, folder filtering, using fake in-memory items, no `bw` calls involved.
-- `scripts/smoke_test.py` runs the compiled binary inside a real pseudo-terminal and dumps what it draws, so you can check that a screen shows up correctly and that error paths don't crash. Read the warning at the top of the script before you run it. It talks to your real `bw` CLI.
+See [Testing strategy](./ARCHITECTURE.md#testing-strategy) in
+ARCHITECTURE.md.
 
 ---
 
@@ -119,7 +78,7 @@ What it does, step by step:
    - **Login** → copies the password.
    - **Note** → copies the note text.
    - **Card** → asks if you want the number or the CVV, then copies it.
-5. On native Wayland, it copies with `wl-copy`, waits `clipboard_clear_secs`, then clears the clipboard and removes the value from `cliphist` history. On WSL2, it copies with `clip.exe` and does not auto-clear. See [Clipboard backends](#clipboard-backends).
+5. On native Wayland, it copies with `wl-copy`, waits `clipboard_clear_secs`, then clears the clipboard and removes the value from `cliphist` history. On WSL2, it copies with `clip.exe` and does not auto-clear. See [Clipboard backends](./ARCHITECTURE.md#clipboard-backends) in ARCHITECTURE.md.
 
 It also starts a background job that locks the vault again once the session times out, so you don't have to remember to lock it yourself.
 
@@ -171,3 +130,11 @@ The file is plain JSON on purpose: the Rust side already depends on `serde_json`
 ## Status
 
 Actively maintained, but built for my own use first. Things I might add later: SSO / API key login, item creation and editing, attachments (Rust version). Issues and PRs are welcome if you find this useful too.
+
+---
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+_Mendoza, Argentina — Nicolás Correa ([ncorrea-13](https://github.com/ncorrea-13))_
