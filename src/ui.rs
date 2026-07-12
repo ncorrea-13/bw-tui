@@ -65,7 +65,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
 }
 
 fn draw_loading(frame: &mut Frame, app: &App) {
-    let inner = boxed(frame, "bitwarden-tui", 40, 5);
+    let inner = boxed(frame, "bw-tui", 40, 5);
     frame.render_widget(
         Paragraph::new(format!("{} Loading…", app.spinner())).style(Style::default().fg(WARN)),
         inner,
@@ -102,7 +102,7 @@ fn boxed(frame: &mut Frame, title: &str, width: u16, height: u16) -> Rect {
 }
 
 fn draw_server_config(frame: &mut Frame, url: &str, error: Option<&str>, busy: bool, spinner: &str) {
-    let inner = boxed(frame, "bitwarden-tui — server", 64, 9);
+    let inner = boxed(frame, "bw-tui — server", 64, 9);
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(1), Constraint::Length(1), Constraint::Length(1), Constraint::Min(1)])
@@ -143,7 +143,7 @@ fn draw_login(
     busy: bool,
     spinner: &str,
 ) {
-    let inner = boxed(frame, "bitwarden-tui — log in", 64, 11);
+    let inner = boxed(frame, "bw-tui — log in", 64, 11);
 
     if awaiting_2fa {
         let chunks = Layout::default()
@@ -212,7 +212,7 @@ fn draw_unlock(
     relock: Option<&str>,
     spinner: &str,
 ) {
-    let inner = boxed(frame, "bitwarden-tui", 60, 9);
+    let inner = boxed(frame, "bw-tui", 60, 9);
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(1), Constraint::Length(1), Constraint::Length(1), Constraint::Length(1), Constraint::Min(1)])
