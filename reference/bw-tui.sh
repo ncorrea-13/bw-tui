@@ -29,6 +29,12 @@ cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/bw-tui"
 session_file="$cache_dir/session"
 session_time_file="$cache_dir/session_time"
 
+is_wsl() {
+  [ -n "$WSL_DISTRO_NAME" ] && return 0
+  [ -n "$WSL_INTEROP" ] && return 0
+  grep -qi microsoft /proc/version 2>/dev/null
+}
+
 clear_session() {
   $BW_CMD lock >/dev/null 2>&1
   rm -f "$session_file" "$session_time_file"
@@ -36,6 +42,13 @@ clear_session() {
 
 copy_and_autoclear() {
   local value="$1" label="$2"
+
+  if is_wsl; then
+    printf '%s' "$value" | clip.exe
+    notify-send "✅ $label copied to clipboard." 2>/dev/null
+    return 0
+  fi
+
   echo -n "$value" | wl-copy
   notify-send "✅ $label copied to clipboard."
 
@@ -86,7 +99,11 @@ if [ -z "$BW_SESSION" ]; then
   ts=$(date +%s)
   echo "$ts" >"$session_time_file"
 
-  swaymsg exec "bash -c 'sleep $max_age; [ \"\$(cat \"$session_time_file\" 2>/dev/null)\" = \"$ts\" ] && { $BW_CMD lock >/dev/null 2>&1; rm -f \"$session_file\" \"$session_time_file\"; }'" >/dev/null 2>&1
+  relock_cmd="sleep $max_age; [ \"\$(cat \"$session_time_file\" 2>/dev/null)\" = \"$ts\" ] && { $BW_CMD lock >/dev/null 2>&1; rm -f \"$session_file\" \"$session_time_file\"; }"
+  nohup bash -c "$relock_cmd" >/dev/null 2>&1 &
+  if is_wsl; then
+    disown
+  fi
 
   items_json=$($BW_CMD list items --session "$BW_SESSION")
 fi
