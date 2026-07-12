@@ -1,0 +1,237 @@
+use super::{App, LoginField, Screen, Tab, VaultMode};
+
+impl App {
+    pub fn handle_key(&mut self, key: crossterm::event::KeyEvent) {
+        use crossterm::event::{KeyCode, KeyModifiers};
+
+        if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
+            self.should_quit = true;
+            return;
+        }
+
+        match &mut self.screen {
+            Screen::ServerConfig { url, busy, .. } => {
+                if *busy {
+                    return;
+                }
+                match key.code {
+                    KeyCode::Esc => self.should_quit = true,
+                    KeyCode::Enter => self.confirm_server_config(),
+                    KeyCode::Backspace => {
+                        url.pop();
+                    }
+                    KeyCode::Char(c) => url.push(c),
+                    _ => {}
+                }
+            }
+            Screen::Login {
+                email,
+                password,
+                focus,
+                awaiting_2fa,
+                code,
+                method,
+                error,
+                busy,
+            } => {
+                if *busy {
+                    return;
+                }
+                if *awaiting_2fa {
+                    match key.code {
+                        KeyCode::Esc => self.should_quit = true,
+                        KeyCode::Tab => *method = method.toggled(),
+                        KeyCode::Enter => {
+                            *error = None;
+                            self.try_login();
+                        }
+                        KeyCode::Backspace => {
+                            code.pop();
+                        }
+                        KeyCode::Char(c) => code.push(c),
+                        _ => {}
+                    }
+                    return;
+                }
+                match key.code {
+                    KeyCode::Esc => self.should_quit = true,
+                    KeyCode::Tab => {
+                        *focus = match focus {
+                            LoginField::Email => LoginField::Password,
+                            LoginField::Password => LoginField::Email,
+                        }
+                    }
+                    KeyCode::Enter => match focus {
+                        LoginField::Email => *focus = LoginField::Password,
+                        LoginField::Password => {
+                            *error = None;
+                            self.try_login();
+                        }
+                    },
+                    KeyCode::Backspace => match focus {
+                        LoginField::Email => {
+                            email.pop();
+                        }
+                        LoginField::Password => {
+                            password.pop();
+                        }
+                    },
+                    KeyCode::Char(c) => match focus {
+                        LoginField::Email => email.push(c),
+                        LoginField::Password => password.push(c),
+                    },
+                    _ => {}
+                }
+            }
+            Screen::Unlock {
+                password,
+                error,
+                busy,
+                ..
+            } => {
+                if *busy {
+                    return;
+                }
+                match key.code {
+                    KeyCode::Esc => self.should_quit = true,
+                    KeyCode::Enter => {
+                        *error = None;
+                        self.try_unlock();
+                    }
+                    KeyCode::Backspace => {
+                        password.pop();
+                    }
+                    KeyCode::Char(c) => password.push(c),
+                    _ => {}
+                }
+            }
+            Screen::Loading => {}
+            Screen::Main => self.handle_main_key(key),
+        }
+    }
+
+    fn handle_main_key(&mut self, key: crossterm::event::KeyEvent) {
+        use crossterm::event::KeyCode;
+
+        match key.code {
+            KeyCode::Tab => {
+                self.tab = self.tab.next();
+                return;
+            }
+            KeyCode::BackTab => {
+                self.tab = self.tab.prev();
+                return;
+            }
+            _ => {}
+        }
+
+        match self.tab {
+            Tab::Vault => match self.vault_mode {
+                VaultMode::Search => match key.code {
+                    KeyCode::Esc => {
+                        self.query.clear();
+                        self.refilter();
+                        self.vault_mode = VaultMode::Normal;
+                    }
+                    KeyCode::Enter => self.vault_mode = VaultMode::Normal,
+                    KeyCode::Backspace => {
+                        self.query.pop();
+                        self.refilter();
+                    }
+                    KeyCode::Char(c) => {
+                        self.query.push(c);
+                        self.refilter();
+                    }
+                    _ => {}
+                },
+                VaultMode::Normal if self.detail_open => match key.code {
+                    KeyCode::Esc => self.detail_open = false,
+                    KeyCode::Char('q') => self.should_quit = true,
+                    KeyCode::Enter => {
+                        self.detail_open = false;
+                        self.copy_primary_secret();
+                    }
+                    KeyCode::Char('u') => self.copy_username(),
+                    KeyCode::Char('t') => self.copy_totp(),
+                    KeyCode::Char('r') => self.toggle_reveal(),
+                    KeyCode::Char('n') => self.copy_notes(),
+                    _ => {}
+                },
+                VaultMode::Normal => {
+                    if key.code != KeyCode::Char('g') {
+                        self.pending_g = false;
+                    }
+                    match key.code {
+                        KeyCode::Esc => {
+                            if !self.query.is_empty() {
+                                self.query.clear();
+                                self.refilter();
+                            } else {
+                                self.should_quit = true;
+                            }
+                        }
+                        KeyCode::Char('q') => self.should_quit = true,
+                        KeyCode::Char('/') => self.vault_mode = VaultMode::Search,
+                        KeyCode::Char('j') | KeyCode::Down => self.move_selection(1),
+                        KeyCode::Char('k') | KeyCode::Up => self.move_selection(-1),
+                        KeyCode::Char('g') => {
+                            if self.pending_g {
+                                self.pending_g = false;
+                                self.selected = 0;
+                                self.reveal = None;
+                            } else {
+                                self.pending_g = true;
+                            }
+                        }
+                        KeyCode::Char('G') => {
+                            self.selected = self.filtered.len().saturating_sub(1);
+                            self.reveal = None;
+                        }
+                        KeyCode::Char('f') => self.toggle_folder_bar(),
+                        KeyCode::Char('h') | KeyCode::Left => self.cycle_folder(-1),
+                        KeyCode::Char('l') | KeyCode::Right => self.cycle_folder(1),
+                        KeyCode::Enter => {
+                            if self.selected_item().is_some() {
+                                self.detail_open = true;
+                            }
+                        }
+                        KeyCode::Char('R') | KeyCode::F(5) => self.refresh_items(),
+                        _ => {}
+                    }
+                }
+            },
+            Tab::Generator => match key.code {
+                KeyCode::Esc => self.should_quit = true,
+                KeyCode::Up => {
+                    self.generator.opts.length = self.generator.opts.length.saturating_add(1).min(128)
+                }
+                KeyCode::Down => {
+                    self.generator.opts.length = self.generator.opts.length.saturating_sub(1).max(5)
+                }
+                KeyCode::Char('u') => self.generator.opts.uppercase = !self.generator.opts.uppercase,
+                KeyCode::Char('l') => self.generator.opts.lowercase = !self.generator.opts.lowercase,
+                KeyCode::Char('n') => self.generator.opts.numbers = !self.generator.opts.numbers,
+                KeyCode::Char('s') => self.generator.opts.special = !self.generator.opts.special,
+                KeyCode::Enter => self.generate_password(),
+                KeyCode::Char('c') => self.copy_generated(),
+                _ => {}
+            },
+            Tab::Account => {
+                if self.confirm_logout {
+                    match key.code {
+                        KeyCode::Char('y') | KeyCode::Char('Y') => self.logout_now(),
+                        _ => self.confirm_logout = false,
+                    }
+                    return;
+                }
+                match key.code {
+                    KeyCode::Esc => self.should_quit = true,
+                    KeyCode::Char('s') => self.sync_now(),
+                    KeyCode::Char('l') => self.lock_now(),
+                    KeyCode::Char('o') => self.confirm_logout = true,
+                    _ => {}
+                }
+            }
+        }
+    }
+}

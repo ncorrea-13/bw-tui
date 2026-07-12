@@ -1,9 +1,10 @@
 use crate::app::{App, LoginField, Screen, Tab, VaultMode};
+use crate::bw::Item;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap},
+    widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
     Frame,
 };
 
@@ -19,7 +20,9 @@ const OK: Color = Color::Rgb(0x81, 0xcb, 0x9d);
 pub fn draw(frame: &mut Frame, app: &App) {
     frame.render_widget(Block::default().style(Style::default().bg(BG).fg(TEXT)), frame.area());
     match &app.screen {
-        Screen::ServerConfig { url, error, busy } => draw_server_config(frame, url, error.as_deref(), *busy),
+        Screen::ServerConfig { url, error, busy } => {
+            draw_server_config(frame, url, error.as_deref(), *busy, app.spinner())
+        }
         Screen::Login {
             email,
             password,
@@ -29,16 +32,44 @@ pub fn draw(frame: &mut Frame, app: &App) {
             method,
             error,
             busy,
-        } => draw_login(frame, email, password, *focus, *awaiting_2fa, code, *method, error.as_deref(), *busy),
+        } => draw_login(
+            frame,
+            email,
+            password,
+            *focus,
+            *awaiting_2fa,
+            code,
+            *method,
+            error.as_deref(),
+            *busy,
+            app.spinner(),
+        ),
         Screen::Unlock {
             email,
             password,
             error,
             busy,
             relock_message,
-        } => draw_unlock(frame, email.as_deref(), password, error.as_deref(), *busy, relock_message.as_deref()),
+        } => draw_unlock(
+            frame,
+            email.as_deref(),
+            password,
+            error.as_deref(),
+            *busy,
+            relock_message.as_deref(),
+            app.spinner(),
+        ),
+        Screen::Loading => draw_loading(frame, app),
         Screen::Main => draw_main(frame, app),
     }
+}
+
+fn draw_loading(frame: &mut Frame, app: &App) {
+    let inner = boxed(frame, "bitwarden-tui", 40, 5);
+    frame.render_widget(
+        Paragraph::new(format!("{} Loading…", app.spinner())).style(Style::default().fg(WARN)),
+        inner,
+    );
 }
 
 fn centered(area: Rect, width: u16, height: u16) -> Rect {
@@ -70,7 +101,7 @@ fn boxed(frame: &mut Frame, title: &str, width: u16, height: u16) -> Rect {
     panel(frame, frame.area(), title, width, height)
 }
 
-fn draw_server_config(frame: &mut Frame, url: &str, error: Option<&str>, busy: bool) {
+fn draw_server_config(frame: &mut Frame, url: &str, error: Option<&str>, busy: bool, spinner: &str) {
     let inner = boxed(frame, "bitwarden-tui — server", 64, 9);
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -84,7 +115,7 @@ fn draw_server_config(frame: &mut Frame, url: &str, error: Option<&str>, busy: b
     frame.render_widget(Paragraph::new(format!("> {url}")), chunks[1]);
     if busy {
         frame.render_widget(
-            Paragraph::new("Configuring...").style(Style::default().fg(WARN)),
+            Paragraph::new(format!("{spinner} Configuring...")).style(Style::default().fg(WARN)),
             chunks[2],
         );
     } else if let Some(err) = error {
@@ -110,6 +141,7 @@ fn draw_login(
     method: crate::app::TwoFactorMethod,
     error: Option<&str>,
     busy: bool,
+    spinner: &str,
 ) {
     let inner = boxed(frame, "bitwarden-tui — log in", 64, 11);
 
@@ -121,7 +153,7 @@ fn draw_login(
         frame.render_widget(Paragraph::new(format!("Method: {} (Tab to switch)", method.label())), chunks[0]);
         frame.render_widget(Paragraph::new(format!("Code: {code}")), chunks[1]);
         if busy {
-            frame.render_widget(Paragraph::new("Verifying...").style(Style::default().fg(WARN)), chunks[2]);
+            frame.render_widget(Paragraph::new(format!("{spinner} Verifying...")).style(Style::default().fg(WARN)), chunks[2]);
         } else if let Some(err) = error {
             frame.render_widget(Paragraph::new(format!("⚠ {err}")).style(Style::default().fg(ERROR)), chunks[2]);
         }
@@ -159,7 +191,7 @@ fn draw_login(
     frame.render_widget(Paragraph::new(format!("Password: {masked}")).style(pass_style), chunks[1]);
 
     if busy {
-        frame.render_widget(Paragraph::new("Logging in...").style(Style::default().fg(WARN)), chunks[2]);
+        frame.render_widget(Paragraph::new(format!("{spinner} Logging in...")).style(Style::default().fg(WARN)), chunks[2]);
     } else if let Some(err) = error {
         frame.render_widget(Paragraph::new(format!("⚠ {err}")).style(Style::default().fg(ERROR)), chunks[2]);
     }
@@ -171,7 +203,15 @@ fn draw_login(
     );
 }
 
-fn draw_unlock(frame: &mut Frame, email: Option<&str>, password: &str, error: Option<&str>, busy: bool, relock: Option<&str>) {
+fn draw_unlock(
+    frame: &mut Frame,
+    email: Option<&str>,
+    password: &str,
+    error: Option<&str>,
+    busy: bool,
+    relock: Option<&str>,
+    spinner: &str,
+) {
     let inner = boxed(frame, "bitwarden-tui", 60, 9);
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -191,7 +231,7 @@ fn draw_unlock(frame: &mut Frame, email: Option<&str>, password: &str, error: Op
     frame.render_widget(Paragraph::new(format!("> {masked}")).style(field_style), chunks[1]);
 
     if busy {
-        frame.render_widget(Paragraph::new("Unlocking...").style(Style::default().fg(WARN)), chunks[2]);
+        frame.render_widget(Paragraph::new(format!("{spinner} Unlocking...")).style(Style::default().fg(WARN)), chunks[2]);
     } else if let Some(err) = error {
         frame.render_widget(Paragraph::new(format!("⚠ {err}")).style(Style::default().fg(ERROR)), chunks[2]);
     }
@@ -237,56 +277,54 @@ fn draw_tab_bar(frame: &mut Frame, app: &App, area: Rect) {
     frame.render_widget(Paragraph::new(Line::from(spans)), area);
 }
 
-/// Renders a dim vertical rule down the left edge of `area` and returns the
-/// remaining inner rect, giving column separation without a boxed border.
-fn divider(frame: &mut Frame, area: Rect) -> Rect {
-    let block = Block::default().borders(Borders::LEFT).border_style(Style::default().fg(ACCENT_DIM));
-    let inner = block.inner(area);
-    frame.render_widget(block, area);
-    inner
-}
-
-fn section_title(frame: &mut Frame, title: &str, area: Rect) -> Rect {
-    let rows = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Length(1), Constraint::Min(0)])
-        .split(area);
-    frame.render_widget(
-        Paragraph::new(title).style(Style::default().fg(MUTED).add_modifier(Modifier::BOLD)),
-        rows[0],
-    );
-    rows[1]
-}
 
 fn draw_vault_tab(frame: &mut Frame, app: &App, area: Rect) {
-    let cols = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(18), Constraint::Percentage(37), Constraint::Percentage(45)])
-        .split(area);
+    let (folder_area, content_area) = if app.show_folders {
+        let rows = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(2), Constraint::Min(3)])
+            .split(area);
+        (Some(rows[0]), rows[1])
+    } else {
+        (None, area)
+    };
 
-    draw_folders(frame, app, cols[0]);
+    if let Some(folder_area) = folder_area {
+        draw_folder_bar(frame, app, folder_area);
+    }
 
-    let col1 = divider(frame, cols[1]);
-    let vault_rows = Layout::default()
+    let list_rows = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(2), Constraint::Min(3)])
-        .split(col1);
-    draw_search_bar(frame, app, vault_rows[0]);
-    draw_list(frame, app, vault_rows[1]);
+        .split(content_area);
+    draw_search_bar(frame, app, list_rows[0]);
+    draw_list(frame, app, list_rows[1]);
 
-    let col2 = divider(frame, cols[2]);
-    draw_detail(frame, app, col2);
+    if app.detail_open
+        && let Some(item) = app.selected_item() {
+            draw_detail_popup(frame, app, item, content_area);
+        }
 }
 
-fn draw_folders(frame: &mut Frame, app: &App, area: Rect) {
-    let inner = section_title(frame, "Folders", area);
+fn draw_folder_bar(frame: &mut Frame, app: &App, area: Rect) {
+    let block = Block::default().borders(Borders::BOTTOM).border_style(Style::default().fg(ACCENT_DIM));
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+
     let total = app.folders.len() + 2;
-    let items: Vec<ListItem> = (0..total).map(|i| ListItem::new(app.folder_label(i))).collect();
-    let list = List::new(items)
-        .highlight_style(Style::default().bg(ACCENT).fg(BG).add_modifier(Modifier::BOLD));
-    let mut state = ListState::default();
-    state.select(Some(app.folder_index));
-    frame.render_stateful_widget(list, inner, &mut state);
+    let mut spans = Vec::with_capacity(total * 2);
+    for i in 0..total {
+        if i > 0 {
+            spans.push(Span::raw("  "));
+        }
+        let style = if i == app.folder_index {
+            Style::default().bg(ACCENT).fg(BG).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(MUTED)
+        };
+        spans.push(Span::styled(format!(" {} ", app.folder_label(i)), style));
+    }
+    frame.render_widget(Paragraph::new(Line::from(spans)), inner);
 }
 
 fn draw_search_bar(frame: &mut Frame, app: &App, area: Rect) {
@@ -295,7 +333,12 @@ fn draw_search_bar(frame: &mut Frame, app: &App, area: Rect) {
         .constraints([Constraint::Length(1), Constraint::Length(1)])
         .split(area);
 
-    let count = format!("Items  {}/{}", app.filtered.len(), app.items.len());
+    let folder_hint = if !app.show_folders && app.folder_index != 0 {
+        format!("  ·  {}  (f: folders)", app.folder_label(app.folder_index))
+    } else {
+        String::new()
+    };
+    let count = format!("Items  {}/{}{folder_hint}", app.filtered.len(), app.items.len());
     frame.render_widget(Paragraph::new(count).style(Style::default().fg(MUTED).add_modifier(Modifier::BOLD)), rows[0]);
 
     let (text, style) = match app.vault_mode {
@@ -333,31 +376,88 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect) {
     frame.render_stateful_widget(list, area, &mut state);
 }
 
-fn draw_detail(frame: &mut Frame, app: &App, area: Rect) {
-    let inner = section_title(frame, "Detail", area);
+fn draw_detail_popup(frame: &mut Frame, app: &App, item: &Item, area: Rect) {
+    let lines = item_detail_lines(app, item);
 
-    let Some(item) = app.selected_item() else {
-        frame.render_widget(Paragraph::new("No results").style(Style::default().fg(MUTED)), inner);
-        return;
+    let width = 78u16.min(area.width.saturating_sub(2)).max(20);
+    let height = (lines.len() as u16 + 4).clamp(8, area.height.saturating_sub(2).max(8));
+    let rect = centered(area, width, height);
+
+    frame.render_widget(Clear, rect);
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(ACCENT))
+        .style(Style::default().bg(BG))
+        .title(Span::styled(format!(" {} ", item.name), Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)));
+    let inner = block.inner(rect);
+    frame.render_widget(block, rect);
+
+    let rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(1), Constraint::Length(1)])
+        .split(inner);
+    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), rows[0]);
+    frame.render_widget(Paragraph::new(detail_footer(item)).style(Style::default().fg(MUTED)), rows[1]);
+}
+
+fn mask_card_number(number: &str) -> String {
+    let last4: String = number.chars().rev().take(4).collect::<Vec<_>>().into_iter().rev().collect();
+    if last4.is_empty() {
+        "•••• •••• •••• ••••".to_string()
+    } else {
+        format!("•••• •••• •••• {last4}")
+    }
+}
+
+fn detail_footer(item: &Item) -> String {
+    let mut parts: Vec<&str> = match item.item_type {
+        1 => vec!["Enter: copy password", "u: username", "t: TOTP", "r: reveal"],
+        3 => vec!["Enter: copy number", "r: reveal"],
+        2 => vec!["Enter: copy notes"],
+        _ => vec![],
     };
+    let has_notes = item.notes.as_deref().is_some_and(|n| !n.is_empty());
+    if item.item_type != 2 && has_notes {
+        parts.push("n: notes");
+    }
+    parts.push("Esc: close");
+    parts.join("  ")
+}
 
-    let mut lines = vec![
-        Line::from(vec![Span::styled("Name: ", Style::default().fg(MUTED)), Span::raw(item.name.clone())]),
-        Line::from(vec![Span::styled("Type: ", Style::default().fg(MUTED)), Span::raw(item.type_label())]),
-    ];
+fn item_detail_lines(app: &App, item: &Item) -> Vec<Line<'static>> {
+    let mut lines = vec![Line::from(vec![
+        Span::styled("Type: ", Style::default().fg(MUTED)),
+        Span::raw(item.type_label()),
+    ])];
 
     match item.item_type {
         3 => {
-            if let Some(summary) = item.card_summary() {
-                lines.push(Line::from(vec![Span::styled("Card: ", Style::default().fg(MUTED)), Span::raw(summary)]));
+            let card = item.card.as_ref();
+            if let Some(holder) = card.and_then(|c| c.cardholder_name.as_deref()) {
+                lines.push(Line::from(vec![Span::styled("Cardholder: ", Style::default().fg(MUTED)), Span::raw(holder.to_string())]));
             }
+            if let Some(brand) = card.and_then(|c| c.brand.as_deref()) {
+                lines.push(Line::from(vec![Span::styled("Brand: ", Style::default().fg(MUTED)), Span::raw(brand.to_string())]));
+            }
+            if let Some((m, y)) = card.and_then(|c| Some((c.exp_month.as_deref()?, c.exp_year.as_deref()?))) {
+                lines.push(Line::from(vec![Span::styled("Expires: ", Style::default().fg(MUTED)), Span::raw(format!("{m}/{y}"))]));
+            }
+            let number_line = match card.and_then(|c| c.number.as_deref()) {
+                None => "Number: not on file".to_string(),
+                Some(number) => match &app.reveal {
+                    Some((id, revealed)) if id == &item.id => format!("Number: {revealed}"),
+                    _ => format!("Number: {}  (press r to reveal)", mask_card_number(number)),
+                },
+            };
+            lines.push(Line::raw(""));
+            lines.push(Line::styled(number_line, Style::default().fg(WARN)));
         }
         4 => {
             if let Some(summary) = item.identity_summary() {
                 lines.push(Line::from(vec![Span::styled("Identity: ", Style::default().fg(MUTED)), Span::raw(summary)]));
             }
         }
-        _ => {
+        1 => {
             lines.push(Line::from(vec![
                 Span::styled("Username: ", Style::default().fg(MUTED)),
                 Span::raw(item.username().unwrap_or("-").to_string()),
@@ -376,6 +476,7 @@ fn draw_detail(frame: &mut Frame, app: &App, area: Rect) {
             lines.push(Line::raw(""));
             lines.push(Line::styled(password_line, Style::default().fg(WARN)));
         }
+        _ => {}
     }
 
     let fields = item.visible_fields();
@@ -394,7 +495,7 @@ fn draw_detail(frame: &mut Frame, app: &App, area: Rect) {
             lines.push(Line::raw(notes.clone()));
         }
 
-    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), inner);
+    lines
 }
 
 fn draw_generator_tab(frame: &mut Frame, app: &App, area: Rect) {
@@ -491,20 +592,26 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
     let secs = remaining % 60;
     let session_txt = format!("Session expires in {mins:02}:{secs:02}");
 
-    let text = if let Some(status) = &app.status {
-        format!("{}   |   {session_txt}", status.text)
+    let (message, style) = if app.busy {
+        let label = app.busy_label.as_deref().unwrap_or("Working...");
+        (format!("{} {label}", app.spinner()), Style::default().fg(WARN))
+    } else if let Some(status) = &app.status {
+        (status.text.clone(), Style::default().fg(ACCENT))
     } else {
-        session_txt
+        (String::new(), Style::default().fg(ACCENT))
     };
 
-    frame.render_widget(Paragraph::new(text).style(Style::default().fg(ACCENT)).alignment(Alignment::Left), area);
+    let text = if message.is_empty() { session_txt } else { format!("{message}   |   {session_txt}") };
+
+    frame.render_widget(Paragraph::new(text).style(style).alignment(Alignment::Left), area);
 }
 
 fn draw_help(frame: &mut Frame, app: &App, area: Rect) {
     let help = match app.tab {
+        Tab::Vault if app.detail_open => "Enter: copy password  u: username  t: TOTP  r: reveal  Esc: close",
         Tab::Vault if app.vault_mode == VaultMode::Search => "type to filter  Enter: confirm  Esc: cancel",
         Tab::Vault => {
-            "j/k: move  gg/G: top/bottom  h/l: folder  /: search  Enter: copy password  u: username  t: TOTP  r: reveal  R: refresh  Tab: switch view  q: quit"
+            "j/k: move  gg/G: top/bottom  f: folders  h/l: folder  /: search  Enter: view details  R: refresh  Tab: switch view  q: quit"
         }
         Tab::Generator => "u/l/n/s: toggle  ↑/↓: length  Enter: generate  c: copy  Tab: switch view  Esc: quit",
         Tab::Account => "s: sync  l: lock  o: log out  Tab: switch view  Esc: quit",

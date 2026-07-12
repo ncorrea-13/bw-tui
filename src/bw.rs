@@ -1,12 +1,18 @@
 use anyhow::{bail, Context, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub const MAX_SESSION_AGE_SECS: u64 = 1200; // 20 minutes, matches reference/bitwarden-tui.sh
+fn bw_command() -> Command {
+    let mut parts = crate::config::get().bw_cmd.split_whitespace();
+    let program = parts.next().unwrap_or("bw");
+    let mut cmd = Command::new(program);
+    cmd.args(parts);
+    cmd
+}
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct UriData {
@@ -49,7 +55,7 @@ pub struct CustomField {
     pub name: Option<String>,
     pub value: Option<String>,
     #[serde(rename = "type")]
-    pub field_type: u8, // 0 text, 1 hidden, 2 boolean, 3 linked
+    pub field_type: u8,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -88,26 +94,6 @@ impl Item {
             4 => "identity",
             _ => "?",
         }
-    }
-
-    pub fn card_summary(&self) -> Option<String> {
-        let c = self.card.as_ref()?;
-        let brand = c.brand.as_deref().unwrap_or("Card");
-        let last4 = c
-            .number
-            .as_ref()
-            .map(|n| n.chars().rev().take(4).collect::<Vec<_>>().into_iter().rev().collect::<String>())
-            .unwrap_or_else(|| "????".to_string());
-        let exp = match (&c.exp_month, &c.exp_year) {
-            (Some(m), Some(y)) => format!(" (expires {m}/{y})"),
-            _ => String::new(),
-        };
-        let holder = c
-            .cardholder_name
-            .as_ref()
-            .map(|h| format!(" — {h}"))
-            .unwrap_or_default();
-        Some(format!("{brand} •••• {last4}{exp}{holder}"))
     }
 
     pub fn identity_summary(&self) -> Option<String> {
@@ -168,7 +154,7 @@ pub struct Status {
     pub last_sync: Option<String>,
     #[serde(rename = "userEmail")]
     pub user_email: Option<String>,
-    pub status: String, // "unauthenticated" | "locked" | "unlocked"
+    pub status: String,
 }
 
 pub enum LoginOutcome {
@@ -176,7 +162,38 @@ pub enum LoginOutcome {
     TwoFactorRequired,
 }
 
-#[derive(Debug, Clone)]
+pub struct VaultLoad {
+    pub key: String,
+    pub ts: u64,
+    pub items: Vec<Item>,
+    pub folders: Vec<Folder>,
+}
+
+pub struct ItemsLoad {
+    pub items: Vec<Item>,
+    pub folders: Vec<Folder>,
+}
+
+pub struct SyncLoad {
+    pub status: Option<Status>,
+    pub items: Vec<Item>,
+    pub folders: Vec<Folder>,
+}
+
+pub enum LoginFlowResult {
+    LoggedIn(VaultLoad),
+    TwoFactorRequired,
+}
+
+pub enum StartOutcome {
+    Vault(VaultLoad),
+    NeedsServerConfig(Status),
+    NeedsUnlock(Status),
+    Error(anyhow::Error),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct GenerateOptions {
     pub length: u8,
     pub uppercase: bool,
@@ -198,16 +215,19 @@ impl Default for GenerateOptions {
 }
 
 fn cache_dir() -> PathBuf {
+    if let Ok(xdg) = std::env::var("XDG_CACHE_HOME") {
+        return PathBuf::from(xdg).join("bw-tui");
+    }
     let home = std::env::var("HOME").expect("HOME is not set");
-    PathBuf::from(home).join(".cache")
+    PathBuf::from(home).join(".cache").join("bw-tui")
 }
 
 fn session_file() -> PathBuf {
-    cache_dir().join("bw_session")
+    cache_dir().join("session")
 }
 
 fn session_time_file() -> PathBuf {
-    cache_dir().join("bw_session_time")
+    cache_dir().join("session_time")
 }
 
 fn now_secs() -> u64 {
@@ -217,9 +237,6 @@ fn now_secs() -> u64 {
         .as_secs()
 }
 
-/// Reads the cached session from disk if present and not older than
-/// MAX_SESSION_AGE_SECS. Does not validate against the bw server; callers
-/// should confirm with `list_items`.
 pub fn load_cached_session() -> Option<(String, u64)> {
     let key = std::fs::read_to_string(session_file()).ok()?;
     let key = key.trim().to_string();
@@ -231,14 +248,14 @@ pub fn load_cached_session() -> Option<(String, u64)> {
         .trim()
         .parse()
         .ok()?;
-    if now_secs().saturating_sub(ts) > MAX_SESSION_AGE_SECS {
+    if now_secs().saturating_sub(ts) > crate::config::get().session_max_age_secs {
         return None;
     }
     Some((key, ts))
 }
 
 pub fn clear_cached_session() {
-    let _ = Command::new("bw")
+    let _ = bw_command()
         .arg("lock")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -250,6 +267,7 @@ pub fn clear_cached_session() {
 pub fn save_session(key: &str) -> Result<u64> {
     let ts = now_secs();
     let path = session_file();
+    std::fs::create_dir_all(cache_dir()).context("could not create the cache directory")?;
     let mut f = std::fs::File::create(&path).context("could not create the session file")?;
     f.set_permissions(std::fs::Permissions::from_mode(0o600))?;
     f.write_all(key.as_bytes())?;
@@ -257,11 +275,9 @@ pub fn save_session(key: &str) -> Result<u64> {
     Ok(ts)
 }
 
-/// Unlocks the vault using the master password, without ever putting the
-/// password on the command line (visible via `ps`). Returns the raw session key.
 pub fn unlock(password: &str) -> Result<String> {
     const ENV_VAR: &str = "BW_TUI_PASSWORD";
-    let out = Command::new("bw")
+    let out = bw_command()
         .args(["unlock", "--raw", "--passwordenv", ENV_VAR])
         .env(ENV_VAR, password)
         .stdin(Stdio::null())
@@ -280,7 +296,7 @@ pub fn unlock(password: &str) -> Result<String> {
 }
 
 pub fn list_items(session: &str) -> Result<Vec<Item>> {
-    let out = Command::new("bw")
+    let out = bw_command()
         .args(["list", "items", "--session", session])
         .stdin(Stdio::null())
         .output()
@@ -297,7 +313,7 @@ pub fn list_items(session: &str) -> Result<Vec<Item>> {
 }
 
 pub fn get_password(id: &str, session: &str) -> Result<String> {
-    let out = Command::new("bw")
+    let out = bw_command()
         .args(["get", "password", id, "--session", session])
         .stdin(Stdio::null())
         .output()
@@ -312,7 +328,7 @@ pub fn get_password(id: &str, session: &str) -> Result<String> {
 }
 
 pub fn get_totp(id: &str, session: &str) -> Result<String> {
-    let out = Command::new("bw")
+    let out = bw_command()
         .args(["get", "totp", id, "--session", session])
         .stdin(Stdio::null())
         .output()
@@ -326,11 +342,8 @@ pub fn get_totp(id: &str, session: &str) -> Result<String> {
     Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
 }
 
-/// Reads `bw status`, which reflects login state from bw's own config, not
-/// our session cache. Used to decide between the server-config, login, and
-/// unlock screens at startup.
 pub fn status() -> Result<Status> {
-    let out = Command::new("bw")
+    let out = bw_command()
         .arg("status")
         .stdin(Stdio::null())
         .output()
@@ -345,7 +358,7 @@ pub fn status() -> Result<Status> {
 }
 
 pub fn config_server(url: &str) -> Result<()> {
-    let out = Command::new("bw")
+    let out = bw_command()
         .args(["config", "server", url])
         .stdin(Stdio::null())
         .output()
@@ -359,9 +372,6 @@ pub fn config_server(url: &str) -> Result<()> {
     Ok(())
 }
 
-/// Full login (email + master password, optionally with a 2FA method/code),
-/// as opposed to `unlock` which assumes the CLI is already authenticated.
-/// `two_factor` is (method, code), e.g. ("0", "123456") for an authenticator app.
 pub fn login(email: &str, password: &str, two_factor: Option<(&str, &str)>) -> Result<LoginOutcome> {
     const ENV_VAR: &str = "BW_TUI_PASSWORD";
     let mut args = vec![
@@ -378,7 +388,7 @@ pub fn login(email: &str, password: &str, two_factor: Option<(&str, &str)>) -> R
         args.push(code.to_string());
     }
 
-    let out = Command::new("bw")
+    let out = bw_command()
         .args(&args)
         .env(ENV_VAR, password)
         .stdin(Stdio::null())
@@ -403,7 +413,7 @@ pub fn login(email: &str, password: &str, two_factor: Option<(&str, &str)>) -> R
 }
 
 pub fn logout() -> Result<()> {
-    let out = Command::new("bw")
+    let out = bw_command()
         .arg("logout")
         .stdin(Stdio::null())
         .output()
@@ -419,7 +429,7 @@ pub fn logout() -> Result<()> {
 }
 
 pub fn sync(session: &str) -> Result<()> {
-    let out = Command::new("bw")
+    let out = bw_command()
         .args(["sync", "--session", session])
         .stdin(Stdio::null())
         .output()
@@ -434,7 +444,7 @@ pub fn sync(session: &str) -> Result<()> {
 }
 
 pub fn list_folders(session: &str) -> Result<Vec<Folder>> {
-    let out = Command::new("bw")
+    let out = bw_command()
         .args(["list", "folders", "--session", session])
         .stdin(Stdio::null())
         .output()
@@ -462,7 +472,7 @@ pub fn generate(opts: &GenerateOptions) -> Result<String> {
     if opts.special {
         args.push("--special".to_string());
     }
-    let out = Command::new("bw")
+    let out = bw_command()
         .args(&args)
         .stdin(Stdio::null())
         .output()
@@ -474,4 +484,69 @@ pub fn generate(opts: &GenerateOptions) -> Result<String> {
         );
     }
     Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+}
+
+// ---- Chained operations ---------------------------------------------------
+//
+// Each of these glues together several blocking `bw` invocations into one
+// call that a background thread can run start-to-finish, so the UI thread
+// only ever waits on a channel instead of a subprocess.
+
+pub fn login_and_load(
+    email: &str,
+    password: &str,
+    two_factor: Option<(&str, &str)>,
+) -> Result<LoginFlowResult> {
+    match login(email, password, two_factor)? {
+        LoginOutcome::TwoFactorRequired => Ok(LoginFlowResult::TwoFactorRequired),
+        LoginOutcome::Success(key) => {
+            let ts = save_session(&key)?;
+            let items = list_items(&key)?;
+            let folders = list_folders(&key).unwrap_or_default();
+            Ok(LoginFlowResult::LoggedIn(VaultLoad { key, ts, items, folders }))
+        }
+    }
+}
+
+pub fn unlock_and_load(password: &str) -> Result<VaultLoad> {
+    let key = unlock(password)?;
+    let ts = save_session(&key)?;
+    let items = list_items(&key)?;
+    let folders = list_folders(&key).unwrap_or_default();
+    Ok(VaultLoad { key, ts, items, folders })
+}
+
+pub fn refresh_items(session: &str) -> Result<ItemsLoad> {
+    let items = list_items(session)?;
+    let folders = list_folders(session).unwrap_or_default();
+    Ok(ItemsLoad { items, folders })
+}
+
+pub fn sync_and_refresh(session: &str) -> Result<SyncLoad> {
+    sync(session)?;
+    let status = status().ok();
+    let items = list_items(session)?;
+    let folders = list_folders(session).unwrap_or_default();
+    Ok(SyncLoad { status, items, folders })
+}
+
+pub fn compute_start() -> StartOutcome {
+    if let Some((key, ts)) = load_cached_session() {
+        if let Ok(items) = list_items(&key) {
+            let folders = list_folders(&key).unwrap_or_default();
+            return StartOutcome::Vault(VaultLoad { key, ts, items, folders });
+        }
+        clear_cached_session();
+    }
+
+    match status() {
+        Ok(s) if s.status == "unauthenticated" => StartOutcome::NeedsServerConfig(s),
+        Ok(s) => StartOutcome::NeedsUnlock(s),
+        Err(e) => StartOutcome::Error(e),
+    }
+}
+
+pub fn logout_and_restart() -> Result<StartOutcome> {
+    logout()?;
+    Ok(compute_start())
 }

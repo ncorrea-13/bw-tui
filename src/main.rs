@@ -1,6 +1,7 @@
 mod app;
 mod bw;
 mod clipboard;
+mod config;
 mod ui;
 
 use anyhow::Result;

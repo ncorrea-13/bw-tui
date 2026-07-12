@@ -4,8 +4,6 @@ use std::process::{Command, Stdio};
 use std::thread;
 use std::time::Duration;
 
-const AUTOCLEAR_SECS: u64 = 9; // matches reference/bitwarden-tui.sh
-
 pub fn copy(text: &str) -> Result<()> {
     let mut child = Command::new("wl-copy")
         .stdin(Stdio::piped())
@@ -57,13 +55,10 @@ fn cliphist_delete(text: &str) {
         .status();
 }
 
-/// Spawns a background thread that, mirroring reference/bitwarden-tui.sh,
-/// scrubs `secret` out of cliphist as soon as it lands there and then, after
-/// AUTOCLEAR_SECS, clears the live clipboard if it still holds the secret.
-/// Runs off the UI thread so the TUI stays interactive while it waits.
 pub fn spawn_autoclear(secret: String, label: &'static str) {
+    let autoclear_secs = crate::config::get().clipboard_clear_secs;
     thread::spawn(move || {
-        let deadline = std::time::Instant::now() + Duration::from_secs(AUTOCLEAR_SECS);
+        let deadline = std::time::Instant::now() + Duration::from_secs(autoclear_secs);
         let mut deleted_from_history = false;
         while std::time::Instant::now() < deadline {
             if !deleted_from_history && cliphist_contains(&secret) {
