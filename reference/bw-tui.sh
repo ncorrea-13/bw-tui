@@ -37,7 +37,7 @@ clear_session() {
 copy_and_autoclear() {
   local value="$1" label="$2"
   echo -n "$value" | wl-copy
-  notify-send "✅ $label copiado al portapapeles."
+  notify-send "✅ $label copied to clipboard."
 
   local deadline=$(($(date +%s) + clear_secs))
   local deleted=0
@@ -51,7 +51,7 @@ copy_and_autoclear() {
   cliphist delete-query "$value" >/dev/null 2>&1
   if [ "$(wl-paste -n 2>/dev/null)" = "$value" ]; then
     wl-copy --clear
-    notify-send "🧹 Portapapeles limpiado."
+    notify-send "🧹 Clipboard cleared."
   fi
 }
 
@@ -73,11 +73,11 @@ if [ -f "$session_file" ]; then
 fi
 
 if [ -z "$BW_SESSION" ]; then
-  echo "🔒 Bitwarden bloqueado, ingresá tu clave maestra:"
+  echo "🔒 Bitwarden is locked, enter your master password:"
   BW_SESSION=$($BW_CMD unlock --raw)
   if [ -z "$BW_SESSION" ]; then
-    echo "❌ No se pudo desbloquear Bitwarden."
-    read -r -p "Presioná Enter para cerrar..."
+    echo "❌ Could not unlock Bitwarden."
+    read -r -p "Press Enter to close..."
     exit 1
   fi
   mkdir -p "$cache_dir"
@@ -94,8 +94,8 @@ fi
 export BW_SESSION
 
 if [ -z "$items_json" ] || [ "$items_json" = "[]" ]; then
-  echo "⚠️ No se encontraron ítems en Bitwarden."
-  read -r -p "Presioná Enter para cerrar..."
+  echo "⚠️ No items found in Bitwarden."
+  read -r -p "Press Enter to close..."
   exit 1
 fi
 
@@ -103,16 +103,16 @@ selection=$(
   echo "$items_json" |
     jq -r '.[] | select(.name != null) |
       [.id,
-       (if .type==1 then "Login" elif .type==2 then "Nota" elif .type==3 then "Tarjeta" elif .type==4 then "Identidad" else "?" end),
+       (if .type==1 then "Login" elif .type==2 then "Note" elif .type==3 then "Card" elif .type==4 then "Identity" else "?" end),
        .name,
        (.login.username // "-")] | @tsv' |
-    fzf --ansi --height=50% --reverse --prompt="Seleccioná una entrada: " \
-      --header="ID\tTIPO\tNOMBRE\tUSUARIO" |
+    fzf --ansi --height=50% --reverse --prompt="Select an entry: " \
+      --header="ID\tTYPE\tNAME\tUSERNAME" |
     awk -F'\t' '{print $1}'
 )
 
 if [ -z "$selection" ]; then
-  echo "❌ No se seleccionó ningún ítem."
+  echo "❌ No item selected."
   exit 0
 fi
 
@@ -122,47 +122,47 @@ case "$item_type" in
 1)
   password=$($BW_CMD get password "$selection" --session "$BW_SESSION" 2>/dev/null)
   if [ -z "$password" ]; then
-    echo "⚠️ No se pudo obtener la contraseña para el ítem con ID '$selection'."
-    read -r -p "Presioná Enter para cerrar..."
+    echo "⚠️ Could not get the password for item ID '$selection'."
+    read -r -p "Press Enter to close..."
     exit 1
   fi
-  copy_and_autoclear "$password" "Contraseña"
+  copy_and_autoclear "$password" "Password"
   ;;
 2)
   notes=$(echo "$items_json" | jq -r --arg id "$selection" '.[] | select(.id==$id) | .notes // empty')
   if [ -z "$notes" ]; then
-    echo "⚠️ Esa nota no tiene contenido."
-    read -r -p "Presioná Enter para cerrar..."
+    echo "⚠️ That note has no content."
+    read -r -p "Press Enter to close..."
     exit 1
   fi
-  copy_and_autoclear "$notes" "Nota"
+  copy_and_autoclear "$notes" "Note"
   ;;
 3)
-  field=$(printf 'Número\nCVV' | fzf --height=20% --reverse --prompt="Copiar: ")
+  field=$(printf 'Number\nCVV' | fzf --height=20% --reverse --prompt="Copy: ")
   case "$field" in
-  Número)
+  Number)
     value=$(echo "$items_json" | jq -r --arg id "$selection" '.[] | select(.id==$id) | .card.number // empty')
-    label="Número de tarjeta"
+    label="Card number"
     ;;
   CVV)
     value=$(echo "$items_json" | jq -r --arg id "$selection" '.[] | select(.id==$id) | .card.code // empty')
     label="CVV"
     ;;
   *)
-    echo "❌ No se seleccionó ningún campo."
+    echo "❌ No field selected."
     exit 0
     ;;
   esac
   if [ -z "$value" ]; then
-    echo "⚠️ Esa tarjeta no tiene ese dato cargado."
-    read -r -p "Presioná Enter para cerrar..."
+    echo "⚠️ That card has no data on file for that field."
+    read -r -p "Press Enter to close..."
     exit 1
   fi
   copy_and_autoclear "$value" "$label"
   ;;
 *)
-  echo "⚠️ Tipo de ítem no soportado todavía."
-  read -r -p "Presioná Enter para cerrar..."
+  echo "⚠️ This item type isn't supported yet."
+  read -r -p "Press Enter to close..."
   exit 1
   ;;
 esac
