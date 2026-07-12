@@ -179,6 +179,7 @@ impl App {
                                 self.pending_g = false;
                                 self.selected = 0;
                                 self.reveal = None;
+                                self.reveal_cvv = None;
                             } else {
                                 self.pending_g = true;
                             }
@@ -186,6 +187,7 @@ impl App {
                         KeyCode::Char('G') => {
                             self.selected = self.filtered.len().saturating_sub(1);
                             self.reveal = None;
+                            self.reveal_cvv = None;
                         }
                         KeyCode::Char('f') => self.toggle_folder_bar(),
                         KeyCode::Char('h') | KeyCode::Left => self.cycle_folder(-1),

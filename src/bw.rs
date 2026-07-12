@@ -38,6 +38,7 @@ pub struct CardData {
     pub exp_month: Option<String>,
     #[serde(rename = "expYear")]
     pub exp_year: Option<String>,
+    pub code: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

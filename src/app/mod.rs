@@ -136,6 +136,7 @@ pub struct App {
     pub status: Option<StatusMsg>,
     pub should_quit: bool,
     pub reveal: Option<(String, String)>,
+    pub reveal_cvv: Option<String>,
     pub detail_open: bool,
     pub server_status: Option<Status>,
     pub generator: GeneratorState,
@@ -168,6 +169,7 @@ impl App {
             status: None,
             should_quit: false,
             reveal: None,
+            reveal_cvv: None,
             detail_open: false,
             server_status: None,
             generator: GeneratorState {
@@ -282,6 +284,7 @@ impl App {
         self.show_folders = false;
         self.vault_mode = VaultMode::Normal;
         self.reveal = None;
+        self.reveal_cvv = None;
         self.detail_open = false;
         self.refilter();
         self.screen = Screen::Main;
@@ -297,6 +300,7 @@ impl App {
         self.folders.clear();
         self.query.clear();
         self.reveal = None;
+        self.reveal_cvv = None;
         self.detail_open = false;
         self.screen = Screen::Unlock {
             email,
@@ -447,6 +451,7 @@ impl App {
             self.selected = self.filtered.len().saturating_sub(1);
         }
         self.reveal = None;
+        self.reveal_cvv = None;
         self.detail_open = false;
     }
 
@@ -462,6 +467,7 @@ impl App {
         let new = (self.selected as i32 + delta).rem_euclid(len);
         self.selected = new as usize;
         self.reveal = None;
+        self.reveal_cvv = None;
         self.detail_open = false;
     }
 
@@ -579,6 +585,7 @@ impl App {
         };
         if self.reveal.as_ref().is_some_and(|(id, _)| id == &item.id) {
             self.reveal = None;
+            self.reveal_cvv = None;
             return;
         }
         match item.item_type {
@@ -601,6 +608,7 @@ impl App {
                     self.set_status("⚠️ This card has no number on file");
                     return;
                 };
+                self.reveal_cvv = item.card.as_ref().and_then(|c| c.code.clone());
                 self.reveal = Some((item.id, number));
             }
             _ => self.set_status("⚠️ Nothing to reveal for this item"),

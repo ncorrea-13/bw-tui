@@ -442,6 +442,7 @@ fn item_detail_lines(app: &App, item: &Item) -> Vec<Line<'static>> {
             if let Some((m, y)) = card.and_then(|c| Some((c.exp_month.as_deref()?, c.exp_year.as_deref()?))) {
                 lines.push(Line::from(vec![Span::styled("Expires: ", Style::default().fg(MUTED)), Span::raw(format!("{m}/{y}"))]));
             }
+            let revealed = app.reveal.as_ref().is_some_and(|(id, _)| id == &item.id);
             let number_line = match card.and_then(|c| c.number.as_deref()) {
                 None => "Number: not on file".to_string(),
                 Some(number) => match &app.reveal {
@@ -451,6 +452,15 @@ fn item_detail_lines(app: &App, item: &Item) -> Vec<Line<'static>> {
             };
             lines.push(Line::raw(""));
             lines.push(Line::styled(number_line, Style::default().fg(WARN)));
+            let cvv_line = match card.and_then(|c| c.code.as_deref()) {
+                None => "CVV: not on file".to_string(),
+                Some(_) if revealed => match &app.reveal_cvv {
+                    Some(cvv) => format!("CVV: {cvv}"),
+                    None => "CVV: •••".to_string(),
+                },
+                Some(_) => "CVV: •••  (press r to reveal)".to_string(),
+            };
+            lines.push(Line::styled(cvv_line, Style::default().fg(WARN)));
         }
         4 => {
             if let Some(summary) = item.identity_summary() {
