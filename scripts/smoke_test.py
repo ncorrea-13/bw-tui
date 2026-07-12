@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PTY-based smoke test harness for bitwarden-tui.
+PTY-based smoke test harness for bw-tui.
 
 Renders the TUI inside a real pseudo-terminal (ratatui/crossterm need one)
 and dumps the ANSI-stripped output, so screens can be checked without a
@@ -23,11 +23,11 @@ Usage:
 
 Examples:
   # Just render whatever the first screen is
-  python3 scripts/smoke_test.py -- ./target/release/bitwarden-tui
+  python3 scripts/smoke_test.py -- ./target/release/bw-tui
 
   # Exercise the wrong-password error path on the Unlock screen
   python3 scripts/smoke_test.py --wait 10 \\
-      --key 5:not-the-real-password --key 0.5:\\r -- ./target/release/bitwarden-tui
+      --key 5:not-the-real-password --key 0.5:\\r -- ./target/release/bw-tui
 """
 import argparse
 import fcntl
@@ -63,13 +63,13 @@ def main() -> int:
         help="after DELAY seconds, send TEXT as keystrokes (repeatable)",
     )
     parser.add_argument(
-        "binary", nargs=argparse.REMAINDER, help="binary and args to run, e.g. -- ./target/release/bitwarden-tui"
+        "binary", nargs=argparse.REMAINDER, help="binary and args to run, e.g. -- ./target/release/bw-tui"
     )
     args = parser.parse_args()
 
     cmd = [a for a in args.binary if a != "--"]
     if not cmd:
-        parser.error("no binary given, e.g.: smoke_test.py -- ./target/release/bitwarden-tui")
+        parser.error("no binary given, e.g.: smoke_test.py -- ./target/release/bw-tui")
 
     master, slave = pty.openpty()
     fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", args.rows, args.cols, 0, 0))
