@@ -114,7 +114,8 @@ impl App {
                         }
                         clipboard::notify(&format!("✅ Password copied: {item_name}"));
                         let secs = crate::config::get().clipboard_clear_secs;
-                        self.set_status(format!("✅ Password for '{item_name}' copied (clears in {secs}s)"));
+                        let note = clipboard::autoclear_note(secs);
+                        self.set_status(format!("✅ Password for '{item_name}' copied{note}"));
                         clipboard::spawn_autoclear(pw, "password");
                     }
                     Ok(_) => self.set_status("⚠️ This item has no password"),
@@ -131,7 +132,8 @@ impl App {
                             return;
                         }
                         let secs = crate::config::get().clipboard_clear_secs;
-                        self.set_status(format!("✅ TOTP code for '{item_name}' copied (clears in {secs}s)"));
+                        let note = clipboard::autoclear_note(secs);
+                        self.set_status(format!("✅ TOTP code for '{item_name}' copied{note}"));
                         clipboard::spawn_autoclear(code, "TOTP");
                     }
                     Ok(_) => self.set_status("⚠️ Could not generate the TOTP code"),

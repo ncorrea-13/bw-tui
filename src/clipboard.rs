@@ -1,10 +1,39 @@
 use anyhow::{Context, Result};
 use std::io::Write;
 use std::process::{Command, Stdio};
+use std::sync::OnceLock;
 use std::thread;
 use std::time::Duration;
 
+static IS_WSL: OnceLock<bool> = OnceLock::new();
+
+pub fn is_wsl() -> bool {
+    *IS_WSL.get_or_init(|| {
+        if std::env::var_os("WSL_DISTRO_NAME").is_some() || std::env::var_os("WSL_INTEROP").is_some()
+        {
+            return true;
+        }
+        std::fs::read_to_string("/proc/version")
+            .map(|v| v.to_ascii_lowercase().contains("microsoft"))
+            .unwrap_or(false)
+    })
+}
+
 pub fn copy(text: &str) -> Result<()> {
+    if is_wsl() {
+        let mut child = Command::new("clip.exe")
+            .stdin(Stdio::piped())
+            .spawn()
+            .context("could not run clip.exe (is Windows interop enabled?)")?;
+        child
+            .stdin
+            .as_mut()
+            .unwrap()
+            .write_all(text.as_bytes())
+            .context("could not write to clip.exe")?;
+        child.wait().context("clip.exe failed")?;
+        return Ok(());
+    }
     let mut child = Command::new("wl-copy")
         .stdin(Stdio::piped())
         .spawn()
@@ -55,7 +84,18 @@ fn cliphist_delete(text: &str) {
         .status();
 }
 
+pub fn autoclear_note(secs: u64) -> String {
+    if is_wsl() {
+        String::new()
+    } else {
+        format!(" (clears in {secs}s)")
+    }
+}
+
 pub fn spawn_autoclear(secret: String, label: &'static str) {
+    if is_wsl() {
+        return;
+    }
     let autoclear_secs = crate::config::get().clipboard_clear_secs;
     thread::spawn(move || {
         let deadline = std::time::Instant::now() + Duration::from_secs(autoclear_secs);

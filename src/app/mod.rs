@@ -535,7 +535,8 @@ impl App {
             return;
         }
         let secs = config::get().clipboard_clear_secs;
-        self.set_status(format!("✅ Card number for '{name}' copied (clears in {secs}s)"));
+        let note = clipboard::autoclear_note(secs);
+        self.set_status(format!("✅ Card number for '{name}' copied{note}"));
         clipboard::spawn_autoclear(number, "card number");
     }
 
@@ -553,7 +554,8 @@ impl App {
             return;
         }
         let secs = config::get().clipboard_clear_secs;
-        self.set_status(format!("✅ Notes for '{name}' copied (clears in {secs}s)"));
+        let note = clipboard::autoclear_note(secs);
+        self.set_status(format!("✅ Notes for '{name}' copied{note}"));
         clipboard::spawn_autoclear(notes, "notes");
     }
 
@@ -636,7 +638,8 @@ impl App {
             return;
         }
         let secs = config::get().clipboard_clear_secs;
-        self.set_status(format!("✅ Generated password copied (clears in {secs}s)"));
+        let note = clipboard::autoclear_note(secs);
+        self.set_status(format!("✅ Generated password copied{note}"));
         clipboard::spawn_autoclear(pw, "generated");
     }
 
