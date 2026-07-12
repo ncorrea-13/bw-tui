@@ -1,4 +1,4 @@
-# bitwarden-tui
+# bw-tui
 
 A terminal UI for [Bitwarden](https://bitwarden.com/), written in Rust with [ratatui](https://ratatui.rs/).
 
@@ -12,13 +12,14 @@ I used to have a small bash script (still kept in `reference/bitwarden-tui.sh`) 
 
 ## Features
 
-- **Full session flow**: it checks `bw status` on startup and shows the right screen — server config if you're not logged in at all, email + password (+ 2FA) if you need to log in, or just the master password if the CLI is already authenticated but locked.
-- **Session cache compatible with the old script**: it reuses `~/.cache/bw_session`, so if you already unlocked the vault with the bash version, it picks that session up instead of asking again.
-- **Vault tab**: fuzzy search over your items, a folder sidebar, and a detail pane that shows logins, cards, identities, custom fields and notes.
+- **Full session flow**: it checks `bw status` on startup and shows the right screen — server config if you're not logged in at all, email + password (+ 2FA) if you need to log in, or just the master password if the CLI is already authenticated but locked. All of that runs on a background thread, so the UI never freezes while `bw` is doing its thing — you get a spinner instead.
+- **Session cache compatible with the old script**: it reuses `~/.cache/bw-tui/session`, so if you already unlocked the vault with the bash version, it picks that session up instead of asking again.
+- **Popup-friendly Vault tab**: a single full-width item list by default (this is meant to be run as a compact popup, not a fullscreen app). Folders collapse into a hidden top bar (`f` to show it) and item detail opens as a centered popup (`Enter`) instead of eating a permanent column.
 - **Vim-style keys** in the vault list: `j`/`k` to move, `gg`/`G` to jump to the top/bottom, `h`/`l` to switch folders, `/` to search (like in vim, not a fzf-style always-on filter).
 - **Generator tab**: wraps `bw generate` with length and character-set options.
 - **Account tab**: shows the server, account email and last sync time, and lets you sync, lock or log out.
-- **Clipboard handling**: copies through `wl-copy` and clears the clipboard (and `cliphist` history) a few seconds after copying a password, username, or TOTP code.
+- **Clipboard handling**: copies through `wl-copy` and clears the clipboard (and `cliphist` history) a few seconds after copying a password, username, TOTP code, card number, or note.
+- **Config file**: reads `~/.config/bw-tui/config.json`, creating it with defaults on first run instead of hardcoding things like the `bw` command, session timeout, or clipboard-clear delay. See [Configuration](#configuration).
 
 ## Requirements
 
@@ -34,8 +35,34 @@ This was built for a Wayland setup and currently only works there. You'll need:
 
 ```sh
 cargo build --release
-./target/release/bitwarden-tui
+./target/release/bw-tui
 ```
+
+## Configuration
+
+On first run (Rust binary or `reference/bitwarden-tui.sh`, whichever you launch first) it creates `~/.config/bw-tui/config.json` — or `$XDG_CONFIG_HOME/bw-tui/config.json` if that's set — with these defaults:
+
+```json
+{
+  "bw_cmd": "bw",
+  "session_max_age_secs": 1200,
+  "clipboard_clear_secs": 9,
+  "generator": {
+    "length": 20,
+    "uppercase": true,
+    "lowercase": true,
+    "numbers": true,
+    "special": false
+  }
+}
+```
+
+- `bw_cmd`: how to invoke the Bitwarden CLI. It's word-split before running, so it can be a wrapper too, e.g. `"flatpak run --command=bw com.bitwarden.desktop"`.
+- `session_max_age_secs`: how long a cached session is considered valid before you're asked to unlock again (both the Rust app and the bash script use this for their own auto-lock timer).
+- `clipboard_clear_secs`: how long a copied secret stays on the clipboard before it's wiped.
+- `generator`: the Generator tab's starting options; you can still change them per-session from the tab itself.
+
+The file is plain JSON on purpose: the Rust side already depends on `serde_json`, and the shell script already depends on `jq` for parsing `bw`'s output, so neither side needed a new dependency to read or write it. Edit the file directly — there's no in-app settings screen.
 
 ## Keybindings
 
@@ -45,14 +72,23 @@ cargo build --release
 | --- | --- |
 | `j` / `k` or ↓ / ↑ | move selection |
 | `gg` / `G` | jump to top / bottom |
+| `f` | show/hide the folder bar |
 | `h` / `l` | previous / next folder |
 | `/` | enter search mode |
-| `Enter` | copy password |
-| `u` | copy username |
-| `t` | copy TOTP code |
-| `r` | reveal / hide password in the detail pane |
+| `Enter` | open the item detail popup |
 | `R` or `F5` | refresh the item list |
 | `q` / `Esc` | quit (`Esc` clears an active filter first) |
+
+**Item detail popup** (after pressing `Enter` on an item): shows everything about it — for a login, that's username/URL/TOTP plus the password masked; for a card, cardholder/brand/expiry plus the number masked; for a note, its full text.
+
+| Key | Action |
+| --- | --- |
+| `Enter` | copy the item's "primary" secret (password / card number / note) |
+| `u` | copy username (logins) |
+| `t` | copy TOTP code (logins) |
+| `r` | reveal password or card number |
+| `n` | copy notes, if the item has any |
+| `Esc` | close the popup |
 
 **Search mode** (after pressing `/`): type to filter, `Enter` confirms and goes back to normal mode, `Esc` cancels and clears the filter.
 
