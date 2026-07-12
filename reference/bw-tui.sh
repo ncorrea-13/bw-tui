@@ -34,6 +34,27 @@ clear_session() {
   rm -f "$session_file" "$session_time_file"
 }
 
+copy_and_autoclear() {
+  local value="$1" label="$2"
+  echo -n "$value" | wl-copy
+  notify-send "✅ $label copiado al portapapeles."
+
+  local deadline=$(($(date +%s) + clear_secs))
+  local deleted=0
+  while [ "$(date +%s)" -lt "$deadline" ]; do
+    if [ "$deleted" -eq 0 ] && cliphist list | grep -qF "$value"; then
+      cliphist delete-query "$value" >/dev/null 2>&1
+      deleted=1
+    fi
+    sleep 0.3
+  done
+  cliphist delete-query "$value" >/dev/null 2>&1
+  if [ "$(wl-paste -n 2>/dev/null)" = "$value" ]; then
+    wl-copy --clear
+    notify-send "🧹 Portapapeles limpiado."
+  fi
+}
+
 if [ -f "$session_file" ] && [ -f "$session_time_file" ]; then
   age=$(($(date +%s) - $(cat "$session_time_file")))
   if [ "$age" -gt "$max_age" ]; then
@@ -80,9 +101,13 @@ fi
 
 selection=$(
   echo "$items_json" |
-    jq -r '.[] | select(.name != null) | [.id, .name, (.login.username // "-")] | @tsv' |
+    jq -r '.[] | select(.name != null) |
+      [.id,
+       (if .type==1 then "Login" elif .type==2 then "Nota" elif .type==3 then "Tarjeta" elif .type==4 then "Identidad" else "?" end),
+       .name,
+       (.login.username // "-")] | @tsv' |
     fzf --ansi --height=50% --reverse --prompt="Seleccioná una entrada: " \
-      --header="ID\tNOMBRE\tUSUARIO" |
+      --header="ID\tTIPO\tNOMBRE\tUSUARIO" |
     awk -F'\t' '{print $1}'
 )
 
@@ -91,28 +116,53 @@ if [ -z "$selection" ]; then
   exit 0
 fi
 
-password=$($BW_CMD get password "$selection" --session "$BW_SESSION" 2>/dev/null)
+item_type=$(echo "$items_json" | jq -r --arg id "$selection" '.[] | select(.id==$id) | .type')
 
-if [ -z "$password" ]; then
-  echo "⚠️ No se pudo obtener la contraseña para el ítem con ID '$selection'."
+case "$item_type" in
+1)
+  password=$($BW_CMD get password "$selection" --session "$BW_SESSION" 2>/dev/null)
+  if [ -z "$password" ]; then
+    echo "⚠️ No se pudo obtener la contraseña para el ítem con ID '$selection'."
+    read -r -p "Presioná Enter para cerrar..."
+    exit 1
+  fi
+  copy_and_autoclear "$password" "Contraseña"
+  ;;
+2)
+  notes=$(echo "$items_json" | jq -r --arg id "$selection" '.[] | select(.id==$id) | .notes // empty')
+  if [ -z "$notes" ]; then
+    echo "⚠️ Esa nota no tiene contenido."
+    read -r -p "Presioná Enter para cerrar..."
+    exit 1
+  fi
+  copy_and_autoclear "$notes" "Nota"
+  ;;
+3)
+  field=$(printf 'Número\nCVV' | fzf --height=20% --reverse --prompt="Copiar: ")
+  case "$field" in
+  Número)
+    value=$(echo "$items_json" | jq -r --arg id "$selection" '.[] | select(.id==$id) | .card.number // empty')
+    label="Número de tarjeta"
+    ;;
+  CVV)
+    value=$(echo "$items_json" | jq -r --arg id "$selection" '.[] | select(.id==$id) | .card.code // empty')
+    label="CVV"
+    ;;
+  *)
+    echo "❌ No se seleccionó ningún campo."
+    exit 0
+    ;;
+  esac
+  if [ -z "$value" ]; then
+    echo "⚠️ Esa tarjeta no tiene ese dato cargado."
+    read -r -p "Presioná Enter para cerrar..."
+    exit 1
+  fi
+  copy_and_autoclear "$value" "$label"
+  ;;
+*)
+  echo "⚠️ Tipo de ítem no soportado todavía."
   read -r -p "Presioná Enter para cerrar..."
   exit 1
-fi
-
-echo -n "$password" | wl-copy
-notify-send "✅ Contraseña copiada al portapapeles para el ítem ID: $selection"
-
-deadline=$(($(date +%s) + clear_secs))
-deleted=0
-while [ "$(date +%s)" -lt "$deadline" ]; do
-  if [ "$deleted" -eq 0 ] && cliphist list | grep -qF "$password"; then
-    cliphist delete-query "$password" >/dev/null 2>&1
-    deleted=1
-  fi
-  sleep 0.3
-done
-cliphist delete-query "$password" >/dev/null 2>&1
-if [ "$(wl-paste -n 2>/dev/null)" = "$password" ]; then
-  wl-copy --clear
-  notify-send "🧹 Portapapeles limpiado."
-fi
+  ;;
+esac
