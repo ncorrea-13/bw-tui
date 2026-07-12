@@ -1,11 +1,33 @@
 #!/usr/bin/env bash
 
-BW_CMD="bw"
-#BW_CMD="flatpak run --command=bw com.bitwarden.desktop"
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/bw-tui"
+config_file="$config_dir/config.json"
 
-session_file="$HOME/.cache/bw_session"
-session_time_file="$HOME/.cache/bw_session_time"
-max_age=1200 # 20 minutes
+if [ ! -f "$config_file" ]; then
+  mkdir -p "$config_dir"
+  cat >"$config_file" <<'EOF'
+{
+  "bw_cmd": "bw",
+  "session_max_age_secs": 1200,
+  "clipboard_clear_secs": 9,
+  "generator": {
+    "length": 20,
+    "uppercase": true,
+    "lowercase": true,
+    "numbers": true,
+    "special": false
+  }
+}
+EOF
+fi
+
+BW_CMD=$(jq -r '.bw_cmd // "bw"' "$config_file")
+max_age=$(jq -r '.session_max_age_secs // 1200' "$config_file")
+clear_secs=$(jq -r '.clipboard_clear_secs // 9' "$config_file")
+
+cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/bw-tui"
+session_file="$cache_dir/session"
+session_time_file="$cache_dir/session_time"
 
 clear_session() {
   $BW_CMD lock >/dev/null 2>&1
@@ -37,6 +59,7 @@ if [ -z "$BW_SESSION" ]; then
     read -r -p "Presioná Enter para cerrar..."
     exit 1
   fi
+  mkdir -p "$cache_dir"
   install -m 600 /dev/null "$session_file"
   echo -n "$BW_SESSION" >"$session_file"
   ts=$(date +%s)
@@ -79,7 +102,7 @@ fi
 echo -n "$password" | wl-copy
 notify-send "✅ Contraseña copiada al portapapeles para el ítem ID: $selection"
 
-deadline=$(($(date +%s) + 9))
+deadline=$(($(date +%s) + clear_secs))
 deleted=0
 while [ "$(date +%s)" -lt "$deadline" ]; do
   if [ "$deleted" -eq 0 ] && cliphist list | grep -qF "$password"; then
