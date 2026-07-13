@@ -147,9 +147,16 @@ impl App {
                     _ => {}
                 },
                 VaultMode::Normal if self.item_form.is_some() => {
-                    if key.code == KeyCode::Esc {
-                        self.item_form = None;
-                        return;
+                    match key.code {
+                        KeyCode::Esc => {
+                            self.item_form = None;
+                            return;
+                        }
+                        KeyCode::Enter => {
+                            self.submit_item_form();
+                            return;
+                        }
+                        _ => {}
                     }
                     let form = self.item_form.as_mut().unwrap();
                     match key.code {

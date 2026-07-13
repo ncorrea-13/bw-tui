@@ -14,6 +14,7 @@ pub enum BwEvent {
     Generated(anyhow::Result<String>),
     Synced(anyhow::Result<bw::SyncLoad>),
     LoggedOut(anyhow::Result<bw::StartOutcome>),
+    ItemCreated(anyhow::Result<bw::Item>),
 }
 
 impl App {
@@ -181,6 +182,27 @@ impl App {
                 match result {
                     Ok(outcome) => self.apply_start_outcome(outcome),
                     Err(e) => self.set_status(format!("⚠️ {e}")),
+                }
+            }
+            BwEvent::ItemCreated(result) => {
+                self.busy = false;
+                self.busy_label = None;
+                match result {
+                    Ok(item) => {
+                        let created_id = item.id.clone();
+                        self.items.push(item);
+                        self.refilter();
+                        if let Some(pos) = self.filtered.iter().position(|&i| self.items[i].id == created_id) {
+                            self.selected = pos;
+                        }
+                        self.item_form = None;
+                        self.set_status("✅ Item created");
+                    }
+                    Err(e) => {
+                        if let Some(form) = &mut self.item_form {
+                            form.error = Some(e.to_string());
+                        }
+                    }
                 }
             }
         }

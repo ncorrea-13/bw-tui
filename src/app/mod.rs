@@ -144,7 +144,6 @@ pub struct ItemForm {
     pub username: String,
     pub password: String,
     pub error: Option<String>,
-    pub busy: bool,
 }
 
 impl ItemForm {
@@ -155,7 +154,6 @@ impl ItemForm {
             username: String::new(),
             password: String::new(),
             error: None,
-            busy: false,
         }
     }
 
@@ -439,6 +437,41 @@ impl App {
 
     pub fn open_create_form(&mut self) {
         self.item_form = Some(ItemForm::new());
+    }
+
+    pub fn submit_item_form(&mut self) {
+        if self.busy {
+            return;
+        }
+        let Some(form) = &self.item_form else {
+            return;
+        };
+        let name = form.name.trim().to_string();
+        let username = (!form.username.is_empty()).then(|| form.username.clone());
+        let password = (!form.password.is_empty()).then(|| form.password.clone());
+
+        if name.is_empty() {
+            self.item_form.as_mut().unwrap().error = Some("Name is required".to_string());
+            return;
+        }
+        let Some(session) = self.session.clone() else {
+            return;
+        };
+
+        self.item_form.as_mut().unwrap().error = None;
+        self.busy = true;
+        self.busy_label = Some("Creating item…".to_string());
+
+        let new_item = bw::NewItem {
+            folder_id: None,
+            item_type: 1,
+            name,
+            notes: None,
+            login: Some(bw::NewLogin { username, password }),
+            card: None,
+            secure_note: None,
+        };
+        self.spawn(move || BwEvent::ItemCreated(bw::create_item(&new_item, &session)));
     }
 
     pub fn refresh_items(&mut self) {
