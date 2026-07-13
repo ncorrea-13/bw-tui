@@ -10,9 +10,10 @@ use ratatui::{
 };
 
 pub(super) fn draw_vault_tab(frame: &mut Frame, app: &App, area: Rect) {
+    let folder_lines = super::wrapped_line_count(folder_bar_char_count(app), area.width).clamp(1, 4);
     let rows = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(3), Constraint::Min(3)])
+        .constraints([Constraint::Length(folder_lines + 2), Constraint::Min(3)])
         .split(area);
     let (folder_area, content_area) = (rows[0], rows[1]);
 
@@ -53,7 +54,15 @@ fn draw_folder_bar(frame: &mut Frame, app: &App, area: Rect) {
         };
         spans.push(Span::styled(format!(" {} ", app.folder_label(i)), style));
     }
-    frame.render_widget(Paragraph::new(Line::from(spans)), inner);
+    frame.render_widget(Paragraph::new(Line::from(spans)).wrap(Wrap { trim: false }), inner);
+}
+
+fn folder_bar_char_count(app: &App) -> usize {
+    let total = app.folders.len() + 2;
+    (0..total)
+        .map(|i| app.folder_label(i).chars().count() + 2)
+        .sum::<usize>()
+        + (total.saturating_sub(1) * 2)
 }
 
 fn draw_search_bar(frame: &mut Frame, app: &App, area: Rect) {

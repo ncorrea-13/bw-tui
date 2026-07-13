@@ -4,15 +4,36 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::Span,
-    widgets::{Block, Borders, Clear, Paragraph},
+    widgets::{Block, Borders, Clear, Paragraph, Wrap},
     Frame,
 };
 
 pub(super) fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rect) {
     let visible_fields = form.kind.fields();
 
+    let plain_hint = "Tab: field  Enter: save  Esc: cancel";
+    let mut ctrl_hints: Vec<&str> = vec![];
+    if matches!(form.mode, ItemFormMode::Create) {
+        ctrl_hints.push("Ctrl+T: change type");
+    }
+    if matches!(form.kind, ItemKind::Login) {
+        ctrl_hints.push("Ctrl+G: random password");
+        if matches!(form.mode, ItemFormMode::Edit { .. }) {
+            ctrl_hints.push("Ctrl+R: view current password");
+        }
+    }
+    let ctrl_hint = ctrl_hints.join("  ");
+
     let width = 76u16.min(area.width.saturating_sub(2)).max(20);
-    let height = (visible_fields.len() as u16 + 6).clamp(8, area.height.saturating_sub(2).max(8));
+    let inner_width = width.saturating_sub(2);
+    let plain_hint_lines = super::wrapped_line_count(plain_hint.chars().count(), inner_width);
+    let ctrl_hint_lines = if ctrl_hint.is_empty() {
+        0
+    } else {
+        super::wrapped_line_count(ctrl_hint.chars().count(), inner_width)
+    };
+    let height = (visible_fields.len() as u16 + 4 + plain_hint_lines + ctrl_hint_lines)
+        .clamp(8, area.height.saturating_sub(2).max(8));
     let rect = centered(area, width, height);
 
     let mode_label = match form.mode {
@@ -32,8 +53,10 @@ pub(super) fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rec
     let mut constraints = vec![Constraint::Length(1); visible_fields.len()];
     constraints.push(Constraint::Length(1));
     constraints.push(Constraint::Min(1));
-    constraints.push(Constraint::Length(1));
-    constraints.push(Constraint::Length(1));
+    constraints.push(Constraint::Length(plain_hint_lines));
+    if ctrl_hint_lines > 0 {
+        constraints.push(Constraint::Length(ctrl_hint_lines));
+    }
     let rows = Layout::default().direction(Direction::Vertical).constraints(constraints).split(inner);
 
     for (i, &field) in visible_fields.iter().enumerate() {
@@ -62,27 +85,15 @@ pub(super) fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rec
         frame.render_widget(Paragraph::new(format!("⚠ {err}")).style(Style::default().fg(ERROR)), rows[error_row]);
     }
 
-    let mut ctrl_hints: Vec<&str> = vec![];
-    if matches!(form.mode, ItemFormMode::Create) {
-        ctrl_hints.push("Ctrl+T: change type");
-    }
-    if matches!(form.kind, ItemKind::Login) {
-        ctrl_hints.push("Ctrl+G: random password");
-        if matches!(form.mode, ItemFormMode::Edit { .. }) {
-            ctrl_hints.push("Ctrl+R: view current password");
-        }
-    }
-
     let plain_hint_row = error_row + 2;
-    let ctrl_hint_row = plain_hint_row + 1;
     frame.render_widget(
-        Paragraph::new("Tab: field  Enter: save  Esc: cancel").style(Style::default().fg(MUTED)),
+        Paragraph::new(plain_hint).style(Style::default().fg(MUTED)).wrap(Wrap { trim: false }),
         rows[plain_hint_row],
     );
-    if !ctrl_hints.is_empty() {
+    if ctrl_hint_lines > 0 {
         frame.render_widget(
-            Paragraph::new(ctrl_hints.join("  ")).style(Style::default().fg(MUTED)),
-            rows[ctrl_hint_row],
+            Paragraph::new(ctrl_hint).style(Style::default().fg(MUTED)).wrap(Wrap { trim: false }),
+            rows[plain_hint_row + 1],
         );
     }
 }

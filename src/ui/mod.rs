@@ -9,7 +9,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Paragraph},
+    widgets::{Block, Paragraph, Wrap},
     Frame,
 };
 
@@ -101,11 +101,22 @@ fn boxed(frame: &mut Frame, title: &str, width: u16, height: u16) -> Rect {
     panel(frame, frame.area(), title, width, height)
 }
 
+fn wrapped_line_count(char_count: usize, width: u16) -> u16 {
+    if width == 0 {
+        return 1;
+    }
+    let width = width as usize;
+    (char_count.div_ceil(width)).max(1) as u16
+}
+
 fn draw_main(frame: &mut Frame, app: &App) {
+    let area = frame.area();
+    let help_lines = wrapped_line_count(help_text(app).chars().count(), area.width).clamp(1, 3);
+
     let root = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(1), Constraint::Min(5), Constraint::Length(1), Constraint::Length(1)])
-        .split(frame.area());
+        .constraints([Constraint::Length(1), Constraint::Min(5), Constraint::Length(1), Constraint::Length(help_lines)])
+        .split(area);
 
     draw_tab_bar(frame, app, root[0]);
 
@@ -156,8 +167,8 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
     frame.render_widget(Paragraph::new(text).style(style).alignment(Alignment::Left), area);
 }
 
-fn draw_help(frame: &mut Frame, app: &App, area: Rect) {
-    let help = match app.tab {
+fn help_text(app: &App) -> &'static str {
+    match app.tab {
         Tab::Vault if app.item_form.is_some() => "Tab: field  Enter: save  Ctrl+G: random password  Esc: cancel",
         Tab::Vault if app.detail_open => "Enter: copy password  u: username  t: TOTP  r: reveal  Esc: close",
         Tab::Vault if app.vault_mode == VaultMode::Search => "type to filter  Enter: confirm  Esc: cancel",
@@ -166,6 +177,12 @@ fn draw_help(frame: &mut Frame, app: &App, area: Rect) {
         }
         Tab::Generator => "u/l/n/s: toggle  ↑/↓: length  Enter: generate  c: copy  Tab: switch view  Esc: quit",
         Tab::Account => "s: sync  l: lock  o: log out  Tab: switch view  Esc: quit",
-    };
-    frame.render_widget(Paragraph::new(help).style(Style::default().fg(MUTED)), area);
+    }
+}
+
+fn draw_help(frame: &mut Frame, app: &App, area: Rect) {
+    frame.render_widget(
+        Paragraph::new(help_text(app)).style(Style::default().fg(MUTED)).wrap(Wrap { trim: false }),
+        area,
+    );
 }
