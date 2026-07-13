@@ -217,11 +217,25 @@ impl App {
         let Some(item) = self.selected_item().cloned() else {
             return;
         };
-        if item.item_type != 1 {
-            self.set_status("⚠️ Editing is only supported for logins right now");
+        if !matches!(item.item_type, 1..=3) {
+            self.set_status("⚠️ Editing is only supported for logins, notes, and cards right now");
             return;
         }
         self.item_form = Some(ItemForm::for_editing(&item));
+    }
+
+    pub fn cycle_item_kind(&mut self, delta: i32) {
+        let Some(form) = &mut self.item_form else {
+            return;
+        };
+        if !matches!(form.mode, ItemFormMode::Create) {
+            return;
+        }
+        form.kind = if delta > 0 { form.kind.next() } else { form.kind.prev() };
+        let fields = form.kind.fields();
+        if !fields.contains(&form.focus) {
+            form.focus = fields[0];
+        }
     }
 
     pub fn open_item_form_password_picker(&mut self) {
@@ -274,9 +288,21 @@ impl App {
         let Some(form) = self.item_form.as_mut() else {
             return;
         };
+        let opt = |s: &str| (!s.is_empty()).then(|| s.to_string());
+
+        let kind = form.kind;
         let name = form.name.trim().to_string();
-        let username = (!form.username.is_empty()).then(|| form.username.clone());
-        let password = (!form.password.is_empty()).then(|| form.password.clone());
+        let notes = opt(&form.notes);
+        let login = matches!(kind, ItemKind::Login)
+            .then(|| bw::NewLogin { username: opt(&form.username), password: opt(&form.password) });
+        let card = matches!(kind, ItemKind::Card).then(|| bw::NewCard {
+            cardholder_name: opt(&form.cardholder_name),
+            brand: opt(&form.brand),
+            number: opt(&form.number),
+            exp_month: opt(&form.exp_month),
+            exp_year: opt(&form.exp_year),
+            code: opt(&form.code),
+        });
         let editing_id = match &form.mode {
             ItemFormMode::Create => None,
             ItemFormMode::Edit { id } => Some(id.clone()),
@@ -296,25 +322,20 @@ impl App {
         match editing_id {
             Some(id) => {
                 self.busy_label = Some("Saving item…".to_string());
-                let patch = bw::ItemPatch {
-                    name,
-                    notes: None,
-                    folder_id: None,
-                    login: Some(bw::NewLogin { username, password }),
-                    card: None,
-                };
+                let patch = bw::ItemPatch { name, notes, folder_id: None, login, card };
                 self.spawn(move || BwEvent::ItemEdited(bw::edit_item(&id, &patch, &session)));
             }
             None => {
                 self.busy_label = Some("Creating item…".to_string());
+                let secure_note = matches!(kind, ItemKind::Note).then_some(bw::SecureNoteData { note_type: 0 });
                 let new_item = bw::NewItem {
                     folder_id: None,
-                    item_type: 1,
+                    item_type: kind.item_type(),
                     name,
-                    notes: None,
-                    login: Some(bw::NewLogin { username, password }),
-                    card: None,
-                    secure_note: None,
+                    notes,
+                    login,
+                    card,
+                    secure_note,
                 };
                 self.spawn(move || BwEvent::ItemCreated(bw::create_item(&new_item, &session)));
             }

@@ -165,6 +165,10 @@ impl App {
                         self.reveal_current_password_in_item_form();
                         return;
                     }
+                    if ctrl_char('t') {
+                        self.cycle_item_kind(1);
+                        return;
+                    }
                     match key.code {
                         KeyCode::Esc => {
                             self.item_form = None;
