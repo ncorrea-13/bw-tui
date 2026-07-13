@@ -99,6 +99,15 @@ impl ItemFormField {
             ItemFormField::Code => "CVV",
         }
     }
+
+    pub fn max_len(self) -> Option<usize> {
+        match self {
+            ItemFormField::ExpMonth => Some(2),
+            ItemFormField::ExpYear => Some(4),
+            ItemFormField::Code => Some(3),
+            _ => None,
+        }
+    }
 }
 
 pub enum ItemFormMode {

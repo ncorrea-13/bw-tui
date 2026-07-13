@@ -194,7 +194,15 @@ impl App {
                             if form.focus == ItemFormField::Password {
                                 form.password_revealed = false;
                             }
-                            form.focused_field_mut().push(c);
+                            let focus = form.focus;
+                            let field = form.focused_field_mut();
+                            let within_limit = match focus.max_len() {
+                                Some(max) => field.chars().count() < max,
+                                None => true,
+                            };
+                            if within_limit {
+                                field.push(c);
+                            }
                         }
                         _ => {}
                     }
