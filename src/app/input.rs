@@ -178,8 +178,8 @@ impl App {
                     }
                     let form = self.item_form.as_mut().unwrap();
                     match key.code {
-                        KeyCode::Tab => form.focus = form.focus.next(),
-                        KeyCode::BackTab => form.focus = form.focus.prev(),
+                        KeyCode::Tab => form.cycle_focus(1),
+                        KeyCode::BackTab => form.cycle_focus(-1),
                         KeyCode::Backspace => {
                             if form.focus == ItemFormField::Password {
                                 form.password_revealed = false;
