@@ -160,6 +160,10 @@ impl App {
                         self.open_item_form_password_picker();
                         return;
                     }
+                    if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('r') {
+                        self.reveal_current_password_in_item_form();
+                        return;
+                    }
                     match key.code {
                         KeyCode::Esc => {
                             self.item_form = None;

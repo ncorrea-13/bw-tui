@@ -15,6 +15,8 @@ pub enum BwEvent {
     Synced(anyhow::Result<bw::SyncLoad>),
     LoggedOut(anyhow::Result<bw::StartOutcome>),
     ItemCreated(anyhow::Result<bw::Item>),
+    ItemEdited(anyhow::Result<bw::Item>),
+    ItemFormPasswordRevealed(anyhow::Result<String>),
 }
 
 impl App {
@@ -203,6 +205,44 @@ impl App {
                             form.error = Some(e.to_string());
                         }
                     }
+                }
+            }
+            BwEvent::ItemEdited(result) => {
+                self.busy = false;
+                self.busy_label = None;
+                match result {
+                    Ok(item) => {
+                        let edited_id = item.id.clone();
+                        if let Some(pos) = self.items.iter().position(|i| i.id == edited_id) {
+                            self.items[pos] = item;
+                        }
+                        self.refilter();
+                        if let Some(pos) = self.filtered.iter().position(|&i| self.items[i].id == edited_id) {
+                            self.selected = pos;
+                        }
+                        self.item_form = None;
+                        self.detail_open = false;
+                        self.set_status("✅ Item updated");
+                    }
+                    Err(e) => {
+                        if let Some(form) = &mut self.item_form {
+                            form.error = Some(e.to_string());
+                        }
+                    }
+                }
+            }
+            BwEvent::ItemFormPasswordRevealed(result) => {
+                self.busy = false;
+                self.busy_label = None;
+                let Some(form) = &mut self.item_form else {
+                    return;
+                };
+                match result {
+                    Ok(password) => {
+                        form.password = password;
+                        form.error = None;
+                    }
+                    Err(e) => form.error = Some(e.to_string()),
                 }
             }
         }

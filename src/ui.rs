@@ -461,11 +461,13 @@ fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rect) {
         frame.render_widget(Paragraph::new(format!("⚠ {err}")).style(Style::default().fg(ERROR)), rows[3]);
     }
 
-    frame.render_widget(
-        Paragraph::new("Tab: field  Enter: save  Ctrl+G: random password  Esc: cancel")
-            .style(Style::default().fg(MUTED)),
-        rows[5],
-    );
+    let footer_hint = match form.mode {
+        ItemFormMode::Create => "Tab: field  Enter: save  Ctrl+G: random password  Esc: cancel",
+        ItemFormMode::Edit { .. } => {
+            "Tab: field  Enter: save  Ctrl+G: random password  Ctrl+R: view current password  Esc: cancel"
+        }
+    };
+    frame.render_widget(Paragraph::new(footer_hint).style(Style::default().fg(MUTED)), rows[5]);
 }
 
 fn mask_card_number(number: &str) -> String {

@@ -116,6 +116,25 @@ impl App {
         }
     }
 
+    pub fn reveal_current_password_in_item_form(&mut self) {
+        if self.busy {
+            return;
+        }
+        let Some(form) = &self.item_form else {
+            return;
+        };
+        let ItemFormMode::Edit { id } = &form.mode else {
+            return;
+        };
+        let id = id.clone();
+        let Some(session) = self.session.clone() else {
+            return;
+        };
+        self.busy = true;
+        self.busy_label = Some("Fetching current password…".to_string());
+        self.spawn(move || BwEvent::ItemFormPasswordRevealed(bw::get_password(&id, &session)));
+    }
+
     pub fn submit_item_form(&mut self) {
         if self.busy {
             return;
@@ -123,12 +142,13 @@ impl App {
         let Some(form) = &self.item_form else {
             return;
         };
-        if !matches!(form.mode, ItemFormMode::Create) {
-            return;
-        }
         let name = form.name.trim().to_string();
         let username = (!form.username.is_empty()).then(|| form.username.clone());
         let password = (!form.password.is_empty()).then(|| form.password.clone());
+        let editing_id = match &form.mode {
+            ItemFormMode::Create => None,
+            ItemFormMode::Edit { id } => Some(id.clone()),
+        };
 
         if name.is_empty() {
             self.item_form.as_mut().unwrap().error = Some("Name is required".to_string());
@@ -140,17 +160,32 @@ impl App {
 
         self.item_form.as_mut().unwrap().error = None;
         self.busy = true;
-        self.busy_label = Some("Creating item…".to_string());
 
-        let new_item = bw::NewItem {
-            folder_id: None,
-            item_type: 1,
-            name,
-            notes: None,
-            login: Some(bw::NewLogin { username, password }),
-            card: None,
-            secure_note: None,
-        };
-        self.spawn(move || BwEvent::ItemCreated(bw::create_item(&new_item, &session)));
+        match editing_id {
+            Some(id) => {
+                self.busy_label = Some("Saving item…".to_string());
+                let patch = bw::ItemPatch {
+                    name,
+                    notes: None,
+                    folder_id: None,
+                    login: Some(bw::NewLogin { username, password }),
+                    card: None,
+                };
+                self.spawn(move || BwEvent::ItemEdited(bw::edit_item(&id, &patch, &session)));
+            }
+            None => {
+                self.busy_label = Some("Creating item…".to_string());
+                let new_item = bw::NewItem {
+                    folder_id: None,
+                    item_type: 1,
+                    name,
+                    notes: None,
+                    login: Some(bw::NewLogin { username, password }),
+                    card: None,
+                    secure_note: None,
+                };
+                self.spawn(move || BwEvent::ItemCreated(bw::create_item(&new_item, &session)));
+            }
+        }
     }
 }
