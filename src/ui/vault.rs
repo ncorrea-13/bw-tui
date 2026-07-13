@@ -144,7 +144,7 @@ fn mask_card_number(number: &str) -> String {
 
 fn detail_footer(item: &Item) -> String {
     let mut parts: Vec<&str> = match item.item_type {
-        1 => vec!["Enter: copy password", "u: username", "t: TOTP", "r: reveal", "e: edit"],
+        1 => vec!["Enter: copy password", "u: username", "t: TOTP", "r: reveal"],
         3 => vec!["Enter: copy number", "r: reveal"],
         2 => vec!["Enter: copy notes"],
         _ => vec![],
@@ -152,6 +152,9 @@ fn detail_footer(item: &Item) -> String {
     let has_notes = item.notes.as_deref().is_some_and(|n| !n.is_empty());
     if item.item_type != 2 && has_notes {
         parts.push("n: notes");
+    }
+    if matches!(item.item_type, 1..=3) {
+        parts.push("e: edit");
     }
     parts.push("Esc: close");
     parts.join("  ")
