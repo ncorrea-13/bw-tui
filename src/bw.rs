@@ -1,4 +1,5 @@
 use anyhow::{bail, Context, Result};
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
@@ -362,6 +363,23 @@ pub fn list_items(session: &str) -> Result<Vec<Item>> {
     let items: Vec<Item> =
         serde_json::from_slice(&out.stdout).context("could not parse bw's response")?;
     Ok(items)
+}
+
+pub fn create_item(new_item: &NewItem, session: &str) -> Result<Item> {
+    let new_item_json = serde_json::to_string(new_item).context("could not encode the new item")?;
+    let new_item_base64 = STANDARD.encode(new_item_json);
+    let out = bw_command()
+        .args(["create", "item", &new_item_base64, "--session", session])
+        .stdin(Stdio::null())
+        .output()
+        .context("could not run `bw create item`")?;
+    if !out.status.success() {
+        bail!(
+            "could not create the item: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
+    serde_json::from_slice(&out.stdout).context("could not parse the created item")
 }
 
 pub fn get_password(id: &str, session: &str) -> Result<String> {
