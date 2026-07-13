@@ -1,4 +1,4 @@
-use crate::app::{App, LoginField, Screen, Tab, VaultMode};
+use crate::app::{App, ItemForm, ItemFormField, LoginField, Screen, Tab, VaultMode};
 use crate::bw::Item;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -300,7 +300,9 @@ fn draw_vault_tab(frame: &mut Frame, app: &App, area: Rect) {
     draw_search_bar(frame, app, list_rows[0]);
     draw_list(frame, app, list_rows[1]);
 
-    if app.detail_open
+    if let Some(form) = &app.item_form {
+        draw_item_form_popup(frame, form, content_area);
+    } else if app.detail_open
         && let Some(item) = app.selected_item() {
             draw_detail_popup(frame, app, item, content_area);
         }
@@ -398,6 +400,64 @@ fn draw_detail_popup(frame: &mut Frame, app: &App, item: &Item, area: Rect) {
         .split(inner);
     frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), rows[0]);
     frame.render_widget(Paragraph::new(detail_footer(item)).style(Style::default().fg(MUTED)), rows[1]);
+}
+
+fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rect) {
+    let width = 60u16.min(area.width.saturating_sub(2)).max(20);
+    let height = 9u16.clamp(8, area.height.saturating_sub(2).max(8));
+    let rect = centered(area, width, height);
+
+    frame.render_widget(Clear, rect);
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(ACCENT))
+        .style(Style::default().bg(BG))
+        .title(Span::styled(" New login item ", Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)));
+    let inner = block.inner(rect);
+    frame.render_widget(block, rect);
+
+    let rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Min(1),
+            Constraint::Length(1),
+        ])
+        .split(inner);
+
+    let field_style = |field: ItemFormField| {
+        if form.focus == field {
+            Style::default().fg(TEXT).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(MUTED)
+        }
+    };
+
+    frame.render_widget(
+        Paragraph::new(format!("Name: {}", form.name)).style(field_style(ItemFormField::Name)),
+        rows[0],
+    );
+    frame.render_widget(
+        Paragraph::new(format!("Username: {}", form.username)).style(field_style(ItemFormField::Username)),
+        rows[1],
+    );
+    let masked_password = "*".repeat(form.password.chars().count());
+    frame.render_widget(
+        Paragraph::new(format!("Password: {masked_password}")).style(field_style(ItemFormField::Password)),
+        rows[2],
+    );
+
+    if let Some(err) = &form.error {
+        frame.render_widget(Paragraph::new(format!("⚠ {err}")).style(Style::default().fg(ERROR)), rows[3]);
+    }
+
+    frame.render_widget(
+        Paragraph::new("Tab: next field   Enter: save   Esc: cancel").style(Style::default().fg(MUTED)),
+        rows[5],
+    );
 }
 
 fn mask_card_number(number: &str) -> String {
@@ -618,10 +678,11 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
 
 fn draw_help(frame: &mut Frame, app: &App, area: Rect) {
     let help = match app.tab {
+        Tab::Vault if app.item_form.is_some() => "Tab: next field  Enter: save  Esc: cancel",
         Tab::Vault if app.detail_open => "Enter: copy password  u: username  t: TOTP  r: reveal  Esc: close",
         Tab::Vault if app.vault_mode == VaultMode::Search => "type to filter  Enter: confirm  Esc: cancel",
         Tab::Vault => {
-            "j/k: move  gg/G: top/bottom  f: folders  h/l: folder  /: search  Enter: view details  R: refresh  Tab: switch view  q: quit"
+            "j/k: move  gg/G: top/bottom  f: folders  h/l: folder  /: search  Enter: view details  n: new item  R: refresh  Tab: switch view  q: quit"
         }
         Tab::Generator => "u/l/n/s: toggle  ↑/↓: length  Enter: generate  c: copy  Tab: switch view  Esc: quit",
         Tab::Account => "s: sync  l: lock  o: log out  Tab: switch view  Esc: quit",

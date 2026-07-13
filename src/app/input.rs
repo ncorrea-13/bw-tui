@@ -113,16 +113,18 @@ impl App {
     fn handle_main_key(&mut self, key: crossterm::event::KeyEvent) {
         use crossterm::event::KeyCode;
 
-        match key.code {
-            KeyCode::Tab => {
-                self.tab = self.tab.next();
-                return;
+        if self.item_form.is_none() {
+            match key.code {
+                KeyCode::Tab => {
+                    self.tab = self.tab.next();
+                    return;
+                }
+                KeyCode::BackTab => {
+                    self.tab = self.tab.prev();
+                    return;
+                }
+                _ => {}
             }
-            KeyCode::BackTab => {
-                self.tab = self.tab.prev();
-                return;
-            }
-            _ => {}
         }
 
         match self.tab {
@@ -144,6 +146,22 @@ impl App {
                     }
                     _ => {}
                 },
+                VaultMode::Normal if self.item_form.is_some() => {
+                    if key.code == KeyCode::Esc {
+                        self.item_form = None;
+                        return;
+                    }
+                    let form = self.item_form.as_mut().unwrap();
+                    match key.code {
+                        KeyCode::Tab => form.focus = form.focus.next(),
+                        KeyCode::BackTab => form.focus = form.focus.prev(),
+                        KeyCode::Backspace => {
+                            form.focused_field_mut().pop();
+                        }
+                        KeyCode::Char(c) => form.focused_field_mut().push(c),
+                        _ => {}
+                    }
+                }
                 VaultMode::Normal if self.detail_open => match key.code {
                     KeyCode::Esc => self.detail_open = false,
                     KeyCode::Char('q') => self.should_quit = true,
@@ -192,6 +210,7 @@ impl App {
                         KeyCode::Char('f') => self.toggle_folder_bar(),
                         KeyCode::Char('h') | KeyCode::Left => self.cycle_folder(-1),
                         KeyCode::Char('l') | KeyCode::Right => self.cycle_folder(1),
+                        KeyCode::Char('n') => self.open_create_form(),
                         KeyCode::Enter => {
                             if self.selected_item().is_some() {
                                 self.detail_open = true;

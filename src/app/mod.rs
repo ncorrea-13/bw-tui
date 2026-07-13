@@ -113,6 +113,60 @@ pub struct GeneratorState {
     pub error: Option<String>,
 }
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum ItemFormField {
+    Name,
+    Username,
+    Password,
+}
+
+impl ItemFormField {
+    fn next(self) -> Self {
+        match self {
+            ItemFormField::Name => ItemFormField::Username,
+            ItemFormField::Username => ItemFormField::Password,
+            ItemFormField::Password => ItemFormField::Name,
+        }
+    }
+
+    fn prev(self) -> Self {
+        match self {
+            ItemFormField::Name => ItemFormField::Password,
+            ItemFormField::Username => ItemFormField::Name,
+            ItemFormField::Password => ItemFormField::Username,
+        }
+    }
+}
+
+pub struct ItemForm {
+    pub focus: ItemFormField,
+    pub name: String,
+    pub username: String,
+    pub password: String,
+    pub error: Option<String>,
+    pub busy: bool,
+}
+
+impl ItemForm {
+    fn new() -> Self {
+        Self {
+            focus: ItemFormField::Name,
+            name: String::new(),
+            username: String::new(),
+            password: String::new(),
+            error: None,
+            busy: false,
+        }
+    }
+
+    fn focused_field_mut(&mut self) -> &mut String {
+        match self.focus {
+            ItemFormField::Name => &mut self.name,
+            ItemFormField::Username => &mut self.username,
+            ItemFormField::Password => &mut self.password,
+        }
+    }
+}
 
 pub struct StatusMsg {
     pub text: String,
@@ -138,6 +192,7 @@ pub struct App {
     pub reveal: Option<(String, String)>,
     pub reveal_cvv: Option<String>,
     pub detail_open: bool,
+    pub item_form: Option<ItemForm>,
     pub server_status: Option<Status>,
     pub generator: GeneratorState,
     pub confirm_logout: bool,
@@ -171,6 +226,7 @@ impl App {
             reveal: None,
             reveal_cvv: None,
             detail_open: false,
+            item_form: None,
             server_status: None,
             generator: GeneratorState {
                 opts: config::get().generator.clone(),
@@ -380,6 +436,10 @@ impl App {
     }
 
     // ---- Vault tab ---------------------------------------------------
+
+    pub fn open_create_form(&mut self) {
+        self.item_form = Some(ItemForm::new());
+    }
 
     pub fn refresh_items(&mut self) {
         if self.busy {
