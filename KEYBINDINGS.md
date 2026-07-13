@@ -10,7 +10,6 @@ Full keyboard reference for the Rust TUI (`src/`). The bash script has no keybin
 | ------------------ | -------------------------- |
 | `j` / `k` or ↓ / ↑ | move selection             |
 | `gg` / `G`         | jump to top / bottom       |
-| `f`                | show/hide the folder bar   |
 | `h` / `l`          | previous / next folder     |
 | `/`                | enter search mode          |
 | `Enter`            | open the item detail popup |
