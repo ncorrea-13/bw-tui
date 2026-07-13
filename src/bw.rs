@@ -141,6 +141,57 @@ impl Item {
     }
 }
 
+// ---- Create/edit payloads -------------------------------------------------
+
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct NewLogin {
+    pub username: Option<String>,
+    pub password: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct NewCard {
+    #[serde(rename = "cardholderName")]
+    pub cardholder_name: Option<String>,
+    pub brand: Option<String>,
+    pub number: Option<String>,
+    #[serde(rename = "expMonth")]
+    pub exp_month: Option<String>,
+    #[serde(rename = "expYear")]
+    pub exp_year: Option<String>,
+    pub code: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SecureNoteData {
+    #[serde(rename = "type")]
+    pub note_type: u8,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct NewItem {
+    #[serde(rename = "folderId")]
+    pub folder_id: Option<String>,
+    #[serde(rename = "type")]
+    pub item_type: u8,
+    pub name: String,
+    pub notes: Option<String>,
+    pub login: Option<NewLogin>,
+    pub card: Option<NewCard>,
+    #[serde(rename = "secureNote")]
+    pub secure_note: Option<SecureNoteData>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ItemPatch {
+    pub name: String,
+    pub notes: Option<String>,
+    #[serde(rename = "folderId")]
+    pub folder_id: Option<String>,
+    pub login: Option<NewLogin>,
+    pub card: Option<NewCard>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct Folder {
     pub id: Option<String>,
