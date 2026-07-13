@@ -38,6 +38,7 @@ pub struct ItemForm {
     pub name: String,
     pub username: String,
     pub password: String,
+    pub password_revealed: bool,
     pub generator_open: bool,
     pub error: Option<String>,
 }
@@ -50,6 +51,7 @@ impl ItemForm {
             name: String::new(),
             username: String::new(),
             password: String::new(),
+            password_revealed: false,
             generator_open: false,
             error: None,
         }
@@ -62,6 +64,7 @@ impl ItemForm {
             name: item.name.clone(),
             username: item.username().unwrap_or_default().to_string(),
             password: String::new(),
+            password_revealed: false,
             generator_open: false,
             error: None,
         }

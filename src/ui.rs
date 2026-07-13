@@ -406,8 +406,8 @@ fn draw_detail_popup(frame: &mut Frame, app: &App, item: &Item, area: Rect) {
 }
 
 fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rect) {
-    let width = 66u16.min(area.width.saturating_sub(2)).max(20);
-    let height = 9u16.clamp(8, area.height.saturating_sub(2).max(8));
+    let width = 76u16.min(area.width.saturating_sub(2)).max(20);
+    let height = 12u16.clamp(8, area.height.saturating_sub(2).max(8));
     let rect = centered(area, width, height);
 
     let title = match form.mode {
@@ -432,6 +432,7 @@ fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rect) {
             Constraint::Length(1),
             Constraint::Min(1),
             Constraint::Length(1),
+            Constraint::Length(1),
         ])
         .split(inner);
 
@@ -451,9 +452,13 @@ fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rect) {
         Paragraph::new(format!("Username: {}", form.username)).style(field_style(ItemFormField::Username)),
         rows[1],
     );
-    let masked_password = "*".repeat(form.password.chars().count());
+    let password_text = if form.password_revealed {
+        format!("Password: {}", form.password)
+    } else {
+        format!("Password: {}", "*".repeat(form.password.chars().count()))
+    };
     frame.render_widget(
-        Paragraph::new(format!("Password: {masked_password}")).style(field_style(ItemFormField::Password)),
+        Paragraph::new(password_text).style(field_style(ItemFormField::Password)),
         rows[2],
     );
 
@@ -461,13 +466,15 @@ fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rect) {
         frame.render_widget(Paragraph::new(format!("⚠ {err}")).style(Style::default().fg(ERROR)), rows[3]);
     }
 
-    let footer_hint = match form.mode {
-        ItemFormMode::Create => "Tab: field  Enter: save  Ctrl+G: random password  Esc: cancel",
-        ItemFormMode::Edit { .. } => {
-            "Tab: field  Enter: save  Ctrl+G: random password  Ctrl+R: view current password  Esc: cancel"
-        }
+    let ctrl_hint = match form.mode {
+        ItemFormMode::Create => "Ctrl+G: random password",
+        ItemFormMode::Edit { .. } => "Ctrl+G: random password  Ctrl+R: view current password",
     };
-    frame.render_widget(Paragraph::new(footer_hint).style(Style::default().fg(MUTED)), rows[5]);
+    frame.render_widget(
+        Paragraph::new("Tab: field  Enter: save  Esc: cancel").style(Style::default().fg(MUTED)),
+        rows[5],
+    );
+    frame.render_widget(Paragraph::new(ctrl_hint).style(Style::default().fg(MUTED)), rows[6]);
 }
 
 fn mask_card_number(number: &str) -> String {

@@ -240,6 +240,7 @@ impl App {
                 match result {
                     Ok(password) => {
                         form.password = password;
+                        form.password_revealed = true;
                         form.error = None;
                     }
                     Err(e) => form.error = Some(e.to_string()),

@@ -1,4 +1,4 @@
-use super::{App, LoginField, Screen, Tab, VaultMode};
+use super::{App, ItemFormField, LoginField, Screen, Tab, VaultMode};
 
 impl App {
     pub fn handle_key(&mut self, key: crossterm::event::KeyEvent) {
@@ -180,9 +180,17 @@ impl App {
                         KeyCode::Tab => form.focus = form.focus.next(),
                         KeyCode::BackTab => form.focus = form.focus.prev(),
                         KeyCode::Backspace => {
+                            if form.focus == ItemFormField::Password {
+                                form.password_revealed = false;
+                            }
                             form.focused_field_mut().pop();
                         }
-                        KeyCode::Char(c) => form.focused_field_mut().push(c),
+                        KeyCode::Char(c) => {
+                            if form.focus == ItemFormField::Password {
+                                form.password_revealed = false;
+                            }
+                            form.focused_field_mut().push(c);
+                        }
                         _ => {}
                     }
                 }
