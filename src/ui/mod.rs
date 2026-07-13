@@ -162,7 +162,7 @@ fn draw_help(frame: &mut Frame, app: &App, area: Rect) {
         Tab::Vault if app.detail_open => "Enter: copy password  u: username  t: TOTP  r: reveal  Esc: close",
         Tab::Vault if app.vault_mode == VaultMode::Search => "type to filter  Enter: confirm  Esc: cancel",
         Tab::Vault => {
-            "j/k: move  gg/G: top/bottom  f: folders  h/l: folder  /: search  Enter: view details  n: new item  R: refresh  Tab: switch view  q: quit"
+            "j/k: move  gg/G: top/bottom  h/l: folder  /: search  Enter: view details  n: new item  R: refresh  Tab: switch view  q: quit"
         }
         Tab::Generator => "u/l/n/s: toggle  ↑/↓: length  Enter: generate  c: copy  Tab: switch view  Esc: quit",
         Tab::Account => "s: sync  l: lock  o: log out  Tab: switch view  Esc: quit",

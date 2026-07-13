@@ -253,7 +253,6 @@ impl App {
                             self.reveal = None;
                             self.reveal_cvv = None;
                         }
-                        KeyCode::Char('f') => self.toggle_folder_bar(),
                         KeyCode::Char('h') | KeyCode::Left => self.cycle_folder(-1),
                         KeyCode::Char('l') | KeyCode::Right => self.cycle_folder(1),
                         KeyCode::Char('n') => self.open_create_form(),

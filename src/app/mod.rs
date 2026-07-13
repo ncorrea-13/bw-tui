@@ -129,7 +129,6 @@ pub struct App {
     pub filtered: Vec<usize>,
     pub folders: Vec<Folder>,
     pub folder_index: usize,
-    pub show_folders: bool,
     pub vault_mode: VaultMode,
     pending_g: bool,
     pub query: String,
@@ -163,7 +162,6 @@ impl App {
             filtered: Vec::new(),
             folders: Vec::new(),
             folder_index: 0,
-            show_folders: false,
             vault_mode: VaultMode::Normal,
             pending_g: false,
             query: String::new(),
@@ -284,7 +282,6 @@ impl App {
         self.session_started = ts;
         self.items = items;
         self.folder_index = 0;
-        self.show_folders = false;
         self.vault_mode = VaultMode::Normal;
         self.reveal = None;
         self.reveal_cvv = None;
@@ -394,10 +391,6 @@ impl App {
         self.busy = true;
         self.busy_label = Some("Refreshing…".to_string());
         self.spawn(move || BwEvent::ItemsRefreshed(bw::refresh_items(&session)));
-    }
-
-    pub fn toggle_folder_bar(&mut self) {
-        self.show_folders = !self.show_folders;
     }
 
     pub fn cycle_folder(&mut self, delta: i32) {

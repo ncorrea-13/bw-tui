@@ -10,19 +10,13 @@ use ratatui::{
 };
 
 pub(super) fn draw_vault_tab(frame: &mut Frame, app: &App, area: Rect) {
-    let (folder_area, content_area) = if app.show_folders {
-        let rows = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Length(2), Constraint::Min(3)])
-            .split(area);
-        (Some(rows[0]), rows[1])
-    } else {
-        (None, area)
-    };
+    let rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(3), Constraint::Min(3)])
+        .split(area);
+    let (folder_area, content_area) = (rows[0], rows[1]);
 
-    if let Some(folder_area) = folder_area {
-        draw_folder_bar(frame, app, folder_area);
-    }
+    draw_folder_bar(frame, app, folder_area);
 
     let list_rows = Layout::default()
         .direction(Direction::Vertical)
@@ -40,7 +34,9 @@ pub(super) fn draw_vault_tab(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_folder_bar(frame: &mut Frame, app: &App, area: Rect) {
-    let block = Block::default().borders(Borders::BOTTOM).border_style(Style::default().fg(ACCENT_DIM));
+    let block = Block::default()
+        .borders(Borders::TOP | Borders::BOTTOM)
+        .border_style(Style::default().fg(ACCENT_DIM));
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
@@ -66,12 +62,7 @@ fn draw_search_bar(frame: &mut Frame, app: &App, area: Rect) {
         .constraints([Constraint::Length(1), Constraint::Length(1)])
         .split(area);
 
-    let folder_hint = if !app.show_folders && app.folder_index != 0 {
-        format!("  ·  {}  (f: folders)", app.folder_label(app.folder_index))
-    } else {
-        String::new()
-    };
-    let count = format!("Items  {}/{}{folder_hint}", app.filtered.len(), app.items.len());
+    let count = format!("Items  {}/{}", app.filtered.len(), app.items.len());
     frame.render_widget(Paragraph::new(count).style(Style::default().fg(MUTED).add_modifier(Modifier::BOLD)), rows[0]);
 
     let (text, style) = match app.vault_mode {
