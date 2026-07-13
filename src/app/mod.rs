@@ -1,5 +1,6 @@
 mod events;
 mod input;
+mod item_form;
 #[cfg(test)]
 mod tests;
 
@@ -7,6 +8,7 @@ use crate::bw::{self, Folder, GenerateOptions, Item, Status};
 use crate::config;
 use crate::clipboard;
 use events::BwEvent;
+pub use item_form::{ItemForm, ItemFormField, ItemFormMode, ItemKind};
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -113,7 +115,6 @@ pub struct GeneratorState {
     pub error: Option<String>,
 }
 
-
 pub struct StatusMsg {
     pub text: String,
     pub shown_at: Instant,
@@ -128,7 +129,6 @@ pub struct App {
     pub filtered: Vec<usize>,
     pub folders: Vec<Folder>,
     pub folder_index: usize,
-    pub show_folders: bool,
     pub vault_mode: VaultMode,
     pending_g: bool,
     pub query: String,
@@ -138,6 +138,7 @@ pub struct App {
     pub reveal: Option<(String, String)>,
     pub reveal_cvv: Option<String>,
     pub detail_open: bool,
+    pub item_form: Option<ItemForm>,
     pub server_status: Option<Status>,
     pub generator: GeneratorState,
     pub confirm_logout: bool,
@@ -161,7 +162,6 @@ impl App {
             filtered: Vec::new(),
             folders: Vec::new(),
             folder_index: 0,
-            show_folders: false,
             vault_mode: VaultMode::Normal,
             pending_g: false,
             query: String::new(),
@@ -171,6 +171,7 @@ impl App {
             reveal: None,
             reveal_cvv: None,
             detail_open: false,
+            item_form: None,
             server_status: None,
             generator: GeneratorState {
                 opts: config::get().generator.clone(),
@@ -281,7 +282,6 @@ impl App {
         self.session_started = ts;
         self.items = items;
         self.folder_index = 0;
-        self.show_folders = false;
         self.vault_mode = VaultMode::Normal;
         self.reveal = None;
         self.reveal_cvv = None;
@@ -391,10 +391,6 @@ impl App {
         self.busy = true;
         self.busy_label = Some("Refreshing…".to_string());
         self.spawn(move || BwEvent::ItemsRefreshed(bw::refresh_items(&session)));
-    }
-
-    pub fn toggle_folder_bar(&mut self) {
-        self.show_folders = !self.show_folders;
     }
 
     pub fn cycle_folder(&mut self, delta: i32) {
@@ -627,6 +623,19 @@ impl App {
         self.busy_label = Some("Generating…".to_string());
         let opts = self.generator.opts.clone();
         self.spawn(move || BwEvent::Generated(bw::generate(&opts)));
+    }
+
+    pub fn apply_generator_option_key(&mut self, code: crossterm::event::KeyCode) {
+        use crossterm::event::KeyCode;
+        match code {
+            KeyCode::Up => self.generator.opts.length = self.generator.opts.length.saturating_add(1).min(128),
+            KeyCode::Down => self.generator.opts.length = self.generator.opts.length.saturating_sub(1).max(5),
+            KeyCode::Char('u') => self.generator.opts.uppercase = !self.generator.opts.uppercase,
+            KeyCode::Char('l') => self.generator.opts.lowercase = !self.generator.opts.lowercase,
+            KeyCode::Char('n') => self.generator.opts.numbers = !self.generator.opts.numbers,
+            KeyCode::Char('s') => self.generator.opts.special = !self.generator.opts.special,
+            _ => {}
+        }
     }
 
     pub fn copy_generated(&mut self) {

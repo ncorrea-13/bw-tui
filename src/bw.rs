@@ -1,4 +1,5 @@
 use anyhow::{bail, Context, Result};
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
@@ -139,6 +140,57 @@ impl Item {
             })
             .unwrap_or_default()
     }
+}
+
+// ---- Create/edit payloads -------------------------------------------------
+
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct NewLogin {
+    pub username: Option<String>,
+    pub password: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct NewCard {
+    #[serde(rename = "cardholderName")]
+    pub cardholder_name: Option<String>,
+    pub brand: Option<String>,
+    pub number: Option<String>,
+    #[serde(rename = "expMonth")]
+    pub exp_month: Option<String>,
+    #[serde(rename = "expYear")]
+    pub exp_year: Option<String>,
+    pub code: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SecureNoteData {
+    #[serde(rename = "type")]
+    pub note_type: u8,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct NewItem {
+    #[serde(rename = "folderId")]
+    pub folder_id: Option<String>,
+    #[serde(rename = "type")]
+    pub item_type: u8,
+    pub name: String,
+    pub notes: Option<String>,
+    pub login: Option<NewLogin>,
+    pub card: Option<NewCard>,
+    #[serde(rename = "secureNote")]
+    pub secure_note: Option<SecureNoteData>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ItemPatch {
+    pub name: String,
+    pub notes: Option<String>,
+    #[serde(rename = "folderId")]
+    pub folder_id: Option<String>,
+    pub login: Option<NewLogin>,
+    pub card: Option<NewCard>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -311,6 +363,102 @@ pub fn list_items(session: &str) -> Result<Vec<Item>> {
     let items: Vec<Item> =
         serde_json::from_slice(&out.stdout).context("could not parse bw's response")?;
     Ok(items)
+}
+
+pub fn create_item(new_item: &NewItem, session: &str) -> Result<Item> {
+    let new_item_json = serde_json::to_string(new_item).context("could not encode the new item")?;
+    let new_item_base64 = STANDARD.encode(new_item_json);
+    let out = bw_command()
+        .args(["create", "item", &new_item_base64, "--session", session])
+        .stdin(Stdio::null())
+        .output()
+        .context("could not run `bw create item`")?;
+    if !out.status.success() {
+        bail!(
+            "could not create the item: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
+    serde_json::from_slice(&out.stdout).context("could not parse the created item")
+}
+
+pub fn get_item(id: &str, session: &str) -> Result<serde_json::Value> {
+    let out = bw_command()
+        .args(["get", "item", id, "--session", session])
+        .stdin(Stdio::null())
+        .output()
+        .context("could not run `bw get item`")?;
+    if !out.status.success() {
+        bail!(
+            "could not get the item: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
+    serde_json::from_slice(&out.stdout).context("could not parse the item")
+}
+
+pub fn edit_item(id: &str, patch: &ItemPatch, session: &str) -> Result<Item> {
+    let mut raw_item = get_item(id, session)?;
+    let item_fields = raw_item.as_object_mut().context("unexpected item shape from bw")?;
+
+    item_fields.insert("name".to_string(), serde_json::json!(patch.name));
+    item_fields.insert("notes".to_string(), serde_json::json!(patch.notes));
+    item_fields.insert("folderId".to_string(), serde_json::json!(patch.folder_id));
+
+    if let Some(login_patch) = &patch.login {
+        let login_fields = item_fields
+            .entry("login".to_string())
+            .or_insert_with(|| serde_json::json!({}))
+            .as_object_mut()
+            .context("unexpected login shape from bw")?;
+        if let Some(username) = &login_patch.username {
+            login_fields.insert("username".to_string(), serde_json::json!(username));
+        }
+        if let Some(password) = &login_patch.password {
+            login_fields.insert("password".to_string(), serde_json::json!(password));
+        }
+    }
+
+    if let Some(card_patch) = &patch.card {
+        let card_fields = item_fields
+            .entry("card".to_string())
+            .or_insert_with(|| serde_json::json!({}))
+            .as_object_mut()
+            .context("unexpected card shape from bw")?;
+        if let Some(cardholder_name) = &card_patch.cardholder_name {
+            card_fields.insert("cardholderName".to_string(), serde_json::json!(cardholder_name));
+        }
+        if let Some(brand) = &card_patch.brand {
+            card_fields.insert("brand".to_string(), serde_json::json!(brand));
+        }
+        if let Some(number) = &card_patch.number {
+            card_fields.insert("number".to_string(), serde_json::json!(number));
+        }
+        if let Some(exp_month) = &card_patch.exp_month {
+            card_fields.insert("expMonth".to_string(), serde_json::json!(exp_month));
+        }
+        if let Some(exp_year) = &card_patch.exp_year {
+            card_fields.insert("expYear".to_string(), serde_json::json!(exp_year));
+        }
+        if let Some(code) = &card_patch.code {
+            card_fields.insert("code".to_string(), serde_json::json!(code));
+        }
+    }
+
+    let edited_item_json = serde_json::to_string(&raw_item).context("could not encode the edited item")?;
+    let edited_item_base64 = STANDARD.encode(edited_item_json);
+    let out = bw_command()
+        .args(["edit", "item", id, &edited_item_base64, "--session", session])
+        .stdin(Stdio::null())
+        .output()
+        .context("could not run `bw edit item`")?;
+    if !out.status.success() {
+        bail!(
+            "could not edit the item: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
+    serde_json::from_slice(&out.stdout).context("could not parse the edited item")
 }
 
 pub fn get_password(id: &str, session: &str) -> Result<String> {

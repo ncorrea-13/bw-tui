@@ -1,5 +1,6 @@
 use super::*;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use ratatui::{backend::TestBackend, Terminal};
 
 fn item(name: &str, folder_id: Option<&str>) -> Item {
     Item {
@@ -165,4 +166,29 @@ fn navigation_keys_are_ignored_while_detail_popup_is_open() {
     assert!(app.detail_open);
     app.handle_key(key(KeyCode::Char('j')));
     assert_eq!(app.selected, 0, "j should not move the selection while the popup is open");
+}
+
+#[test]
+fn folder_bar_wraps_instead_of_clipping_at_narrow_width() {
+    let folders: Vec<Folder> = (0..12)
+        .map(|i| Folder { id: Some(format!("f{i}")), name: format!("Folder{i:02}") })
+        .collect();
+    let app = vault_app(vec![item("Alpha", None)], folders);
+
+    let backend = TestBackend::new(90, 28);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|frame| crate::ui::draw(frame, &app)).unwrap();
+
+    let rendered: String = terminal
+        .backend()
+        .buffer()
+        .content()
+        .iter()
+        .map(|cell| cell.symbol())
+        .collect();
+
+    for i in 0..12 {
+        let label = format!("Folder{i:02}");
+        assert!(rendered.contains(&label), "expected to find '{label}' in the rendered frame");
+    }
 }

@@ -1,4 +1,4 @@
-use super::{App, LoginField, Screen, Tab, VaultMode};
+use super::{App, ItemFormField, LoginField, Screen, Tab, VaultMode};
 
 impl App {
     pub fn handle_key(&mut self, key: crossterm::event::KeyEvent) {
@@ -111,18 +111,20 @@ impl App {
     }
 
     fn handle_main_key(&mut self, key: crossterm::event::KeyEvent) {
-        use crossterm::event::KeyCode;
+        use crossterm::event::{KeyCode, KeyModifiers};
 
-        match key.code {
-            KeyCode::Tab => {
-                self.tab = self.tab.next();
-                return;
+        if self.item_form.is_none() {
+            match key.code {
+                KeyCode::Tab => {
+                    self.tab = self.tab.next();
+                    return;
+                }
+                KeyCode::BackTab => {
+                    self.tab = self.tab.prev();
+                    return;
+                }
+                _ => {}
             }
-            KeyCode::BackTab => {
-                self.tab = self.tab.prev();
-                return;
-            }
-            _ => {}
         }
 
         match self.tab {
@@ -144,6 +146,67 @@ impl App {
                     }
                     _ => {}
                 },
+                VaultMode::Normal if self.item_form.is_some() => {
+                    if self.item_form.as_ref().unwrap().generator_open {
+                        match key.code {
+                            KeyCode::Esc => self.close_item_form_password_picker(),
+                            KeyCode::Char('g') => self.generate_password(),
+                            KeyCode::Enter => self.confirm_item_form_password_picker(),
+                            code => self.apply_generator_option_key(code),
+                        }
+                        return;
+                    }
+                    let ctrl_char = |c| key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char(c);
+                    if ctrl_char('g') {
+                        self.open_item_form_password_picker();
+                        return;
+                    }
+                    if ctrl_char('r') {
+                        self.reveal_current_password_in_item_form();
+                        return;
+                    }
+                    if ctrl_char('t') {
+                        self.cycle_item_kind(1);
+                        return;
+                    }
+                    match key.code {
+                        KeyCode::Esc => {
+                            self.item_form = None;
+                            return;
+                        }
+                        KeyCode::Enter => {
+                            self.submit_item_form();
+                            return;
+                        }
+                        _ => {}
+                    }
+                    let form = self.item_form.as_mut().unwrap();
+                    match key.code {
+                        KeyCode::Tab => form.cycle_focus(1),
+                        KeyCode::BackTab => form.cycle_focus(-1),
+                        KeyCode::Backspace => {
+                            if form.focus == ItemFormField::Password {
+                                form.password_revealed = false;
+                            }
+                            form.focused_field_mut().pop();
+                        }
+                        KeyCode::Char(c) => {
+                            if form.focus == ItemFormField::Password {
+                                form.password_revealed = false;
+                            }
+                            let focus = form.focus;
+                            let field = form.focused_field_mut();
+                            let within_limit = match focus.max_len() {
+                                Some(max) => field.chars().count() < max,
+                                None => true,
+                            };
+                            if within_limit {
+                                field.push(c);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
                 VaultMode::Normal if self.detail_open => match key.code {
                     KeyCode::Esc => self.detail_open = false,
                     KeyCode::Char('q') => self.should_quit = true,
@@ -155,6 +218,7 @@ impl App {
                     KeyCode::Char('t') => self.copy_totp(),
                     KeyCode::Char('r') => self.toggle_reveal(),
                     KeyCode::Char('n') => self.copy_notes(),
+                    KeyCode::Char('e') => self.open_edit_form(),
                     _ => {}
                 },
                 VaultMode::Normal => {
@@ -189,9 +253,9 @@ impl App {
                             self.reveal = None;
                             self.reveal_cvv = None;
                         }
-                        KeyCode::Char('f') => self.toggle_folder_bar(),
                         KeyCode::Char('h') | KeyCode::Left => self.cycle_folder(-1),
                         KeyCode::Char('l') | KeyCode::Right => self.cycle_folder(1),
+                        KeyCode::Char('n') => self.open_create_form(),
                         KeyCode::Enter => {
                             if self.selected_item().is_some() {
                                 self.detail_open = true;
@@ -204,19 +268,9 @@ impl App {
             },
             Tab::Generator => match key.code {
                 KeyCode::Esc => self.should_quit = true,
-                KeyCode::Up => {
-                    self.generator.opts.length = self.generator.opts.length.saturating_add(1).min(128)
-                }
-                KeyCode::Down => {
-                    self.generator.opts.length = self.generator.opts.length.saturating_sub(1).max(5)
-                }
-                KeyCode::Char('u') => self.generator.opts.uppercase = !self.generator.opts.uppercase,
-                KeyCode::Char('l') => self.generator.opts.lowercase = !self.generator.opts.lowercase,
-                KeyCode::Char('n') => self.generator.opts.numbers = !self.generator.opts.numbers,
-                KeyCode::Char('s') => self.generator.opts.special = !self.generator.opts.special,
                 KeyCode::Enter => self.generate_password(),
                 KeyCode::Char('c') => self.copy_generated(),
-                _ => {}
+                code => self.apply_generator_option_key(code),
             },
             Tab::Account => {
                 if self.confirm_logout {

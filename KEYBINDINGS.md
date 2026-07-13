@@ -10,10 +10,10 @@ Full keyboard reference for the Rust TUI (`src/`). The bash script has no keybin
 | ------------------ | -------------------------- |
 | `j` / `k` or ↓ / ↑ | move selection             |
 | `gg` / `G`         | jump to top / bottom       |
-| `f`                | show/hide the folder bar   |
 | `h` / `l`          | previous / next folder     |
 | `/`                | enter search mode          |
 | `Enter`            | open the item detail popup |
+| `n`                | create a new item          |
 | `R` or `F5`        | refresh the item list      |
 | `q` / `Esc`        | quit                       |
 
@@ -28,7 +28,35 @@ Shows everything about the selected item: for a login, that's username/URL/TOTP 
 | `t`     | copy TOTP code (logins)                                       |
 | `r`     | reveal password or card number                                |
 | `n`     | copy notes, if the item has any                               |
+| `e`     | edit item                                                     |
 | `Esc`   | close the popup                                               |
+
+## Create / edit item form
+
+Opened with `n` from the vault list (new item) or `e` from the item detail popup (edit the selected login, note, or card). Which fields show up depends on the item type; you can't change an existing item's type, only pick one while creating.
+
+| Key                 | Action                                                    |
+| ------------------- | --------------------------------------------------------- |
+| `Tab` / `Shift+Tab` | move to the next / previous field                         |
+| `Ctrl+T`            | cycle item type (creating mode)                           |
+| `Ctrl+G`            | open the password generator (login only)                  |
+| `Ctrl+R`            | fetch and show the item's current password (editing mode) |
+| `Enter`             | save                                                      |
+| `Esc`               | closes the form                                           |
+
+Leaving the password field empty while editing keeps the item's existing password; it's never overwritten with a blank one.
+
+### Password generator (`Ctrl+G`)
+
+Takes over the whole screen and shares the same options as the Generator tab.
+
+| Key             | Action                                                      |
+| --------------- | ----------------------------------------------------------- |
+| `u`/`l`/`n`/`s` | toggle uppercase / lowercase / numbers / special characters |
+| `↑` / `↓`       | change length                                               |
+| `Enter`         | generate or use the shown password                          |
+| `g`             | regenerate                                                  |
+| `Esc`           | back to the form without changing it                        |
 
 ## Search mode
 
