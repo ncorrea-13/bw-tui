@@ -156,11 +156,12 @@ impl App {
                         }
                         return;
                     }
-                    if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('g') {
+                    let ctrl_char = |c| key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char(c);
+                    if ctrl_char('g') {
                         self.open_item_form_password_picker();
                         return;
                     }
-                    if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('r') {
+                    if ctrl_char('r') {
                         self.reveal_current_password_in_item_form();
                         return;
                     }

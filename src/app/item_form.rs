@@ -142,7 +142,7 @@ impl App {
         if self.busy {
             return;
         }
-        let Some(form) = &self.item_form else {
+        let Some(form) = self.item_form.as_mut() else {
             return;
         };
         let name = form.name.trim().to_string();
@@ -154,14 +154,14 @@ impl App {
         };
 
         if name.is_empty() {
-            self.item_form.as_mut().unwrap().error = Some("Name is required".to_string());
+            form.error = Some("Name is required".to_string());
             return;
         }
         let Some(session) = self.session.clone() else {
             return;
         };
 
-        self.item_form.as_mut().unwrap().error = None;
+        form.error = None;
         self.busy = true;
 
         match editing_id {
