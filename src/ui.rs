@@ -1,4 +1,4 @@
-use crate::app::{App, ItemForm, ItemFormField, LoginField, Screen, Tab, VaultMode};
+use crate::app::{App, ItemForm, ItemFormField, ItemFormMode, LoginField, Screen, Tab, VaultMode};
 use crate::bw::Item;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -410,12 +410,16 @@ fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rect) {
     let height = 9u16.clamp(8, area.height.saturating_sub(2).max(8));
     let rect = centered(area, width, height);
 
+    let title = match form.mode {
+        ItemFormMode::Create => " New login item ",
+        ItemFormMode::Edit { .. } => " Edit login item ",
+    };
     frame.render_widget(Clear, rect);
     let block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(ACCENT))
         .style(Style::default().bg(BG))
-        .title(Span::styled(" New login item ", Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)));
+        .title(Span::styled(title, Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)));
     let inner = block.inner(rect);
     frame.render_widget(block, rect);
 
@@ -475,7 +479,7 @@ fn mask_card_number(number: &str) -> String {
 
 fn detail_footer(item: &Item) -> String {
     let mut parts: Vec<&str> = match item.item_type {
-        1 => vec!["Enter: copy password", "u: username", "t: TOTP", "r: reveal"],
+        1 => vec!["Enter: copy password", "u: username", "t: TOTP", "r: reveal", "e: edit"],
         3 => vec!["Enter: copy number", "r: reveal"],
         2 => vec!["Enter: copy notes"],
         _ => vec![],

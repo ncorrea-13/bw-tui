@@ -1,6 +1,6 @@
 use super::events::BwEvent;
 use super::App;
-use crate::bw;
+use crate::bw::{self, Item};
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum ItemFormField {
@@ -27,7 +27,13 @@ impl ItemFormField {
     }
 }
 
+pub enum ItemFormMode {
+    Create,
+    Edit { id: String },
+}
+
 pub struct ItemForm {
+    pub mode: ItemFormMode,
     pub focus: ItemFormField,
     pub name: String,
     pub username: String,
@@ -39,9 +45,22 @@ pub struct ItemForm {
 impl ItemForm {
     fn new() -> Self {
         Self {
+            mode: ItemFormMode::Create,
             focus: ItemFormField::Name,
             name: String::new(),
             username: String::new(),
+            password: String::new(),
+            generator_open: false,
+            error: None,
+        }
+    }
+
+    fn for_editing_login(item: &Item) -> Self {
+        Self {
+            mode: ItemFormMode::Edit { id: item.id.clone() },
+            focus: ItemFormField::Name,
+            name: item.name.clone(),
+            username: item.username().unwrap_or_default().to_string(),
             password: String::new(),
             generator_open: false,
             error: None,
@@ -60,6 +79,17 @@ impl ItemForm {
 impl App {
     pub fn open_create_form(&mut self) {
         self.item_form = Some(ItemForm::new());
+    }
+
+    pub fn open_edit_form(&mut self) {
+        let Some(item) = self.selected_item().cloned() else {
+            return;
+        };
+        if item.item_type != 1 {
+            self.set_status("⚠️ Editing is only supported for logins right now");
+            return;
+        }
+        self.item_form = Some(ItemForm::for_editing_login(&item));
     }
 
     pub fn open_item_form_password_picker(&mut self) {
@@ -93,6 +123,9 @@ impl App {
         let Some(form) = &self.item_form else {
             return;
         };
+        if !matches!(form.mode, ItemFormMode::Create) {
+            return;
+        }
         let name = form.name.trim().to_string();
         let username = (!form.username.is_empty()).then(|| form.username.clone());
         let password = (!form.password.is_empty()).then(|| form.password.clone());

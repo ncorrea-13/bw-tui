@@ -8,7 +8,7 @@ use crate::bw::{self, Folder, GenerateOptions, Item, Status};
 use crate::config;
 use crate::clipboard;
 use events::BwEvent;
-pub use item_form::{ItemForm, ItemFormField};
+pub use item_form::{ItemForm, ItemFormField, ItemFormMode};
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
 use std::sync::mpsc::{self, Receiver, Sender};

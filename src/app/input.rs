@@ -193,6 +193,7 @@ impl App {
                     KeyCode::Char('t') => self.copy_totp(),
                     KeyCode::Char('r') => self.toggle_reveal(),
                     KeyCode::Char('n') => self.copy_notes(),
+                    KeyCode::Char('e') => self.open_edit_form(),
                     _ => {}
                 },
                 VaultMode::Normal => {
