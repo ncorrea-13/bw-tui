@@ -111,7 +111,7 @@ impl App {
     }
 
     fn handle_main_key(&mut self, key: crossterm::event::KeyEvent) {
-        use crossterm::event::KeyCode;
+        use crossterm::event::{KeyCode, KeyModifiers};
 
         if self.item_form.is_none() {
             match key.code {
@@ -147,6 +147,19 @@ impl App {
                     _ => {}
                 },
                 VaultMode::Normal if self.item_form.is_some() => {
+                    if self.item_form.as_ref().unwrap().generator_open {
+                        match key.code {
+                            KeyCode::Esc => self.close_item_form_password_picker(),
+                            KeyCode::Char('g') => self.generate_password(),
+                            KeyCode::Enter => self.confirm_item_form_password_picker(),
+                            code => self.apply_generator_option_key(code),
+                        }
+                        return;
+                    }
+                    if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('g') {
+                        self.open_item_form_password_picker();
+                        return;
+                    }
                     match key.code {
                         KeyCode::Esc => {
                             self.item_form = None;
@@ -230,19 +243,9 @@ impl App {
             },
             Tab::Generator => match key.code {
                 KeyCode::Esc => self.should_quit = true,
-                KeyCode::Up => {
-                    self.generator.opts.length = self.generator.opts.length.saturating_add(1).min(128)
-                }
-                KeyCode::Down => {
-                    self.generator.opts.length = self.generator.opts.length.saturating_sub(1).max(5)
-                }
-                KeyCode::Char('u') => self.generator.opts.uppercase = !self.generator.opts.uppercase,
-                KeyCode::Char('l') => self.generator.opts.lowercase = !self.generator.opts.lowercase,
-                KeyCode::Char('n') => self.generator.opts.numbers = !self.generator.opts.numbers,
-                KeyCode::Char('s') => self.generator.opts.special = !self.generator.opts.special,
                 KeyCode::Enter => self.generate_password(),
                 KeyCode::Char('c') => self.copy_generated(),
-                _ => {}
+                code => self.apply_generator_option_key(code),
             },
             Tab::Account => {
                 if self.confirm_logout {

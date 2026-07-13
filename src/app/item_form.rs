@@ -32,6 +32,7 @@ pub struct ItemForm {
     pub name: String,
     pub username: String,
     pub password: String,
+    pub generator_open: bool,
     pub error: Option<String>,
 }
 
@@ -42,6 +43,7 @@ impl ItemForm {
             name: String::new(),
             username: String::new(),
             password: String::new(),
+            generator_open: false,
             error: None,
         }
     }
@@ -58,6 +60,30 @@ impl ItemForm {
 impl App {
     pub fn open_create_form(&mut self) {
         self.item_form = Some(ItemForm::new());
+    }
+
+    pub fn open_item_form_password_picker(&mut self) {
+        if let Some(form) = &mut self.item_form {
+            form.generator_open = true;
+        }
+    }
+
+    pub fn close_item_form_password_picker(&mut self) {
+        if let Some(form) = &mut self.item_form {
+            form.generator_open = false;
+        }
+    }
+
+    pub fn confirm_item_form_password_picker(&mut self) {
+        match self.generator.result.clone() {
+            Some(password) => {
+                if let Some(form) = &mut self.item_form {
+                    form.password = password;
+                    form.generator_open = false;
+                }
+            }
+            None => self.generate_password(),
+        }
     }
 
     pub fn submit_item_form(&mut self) {

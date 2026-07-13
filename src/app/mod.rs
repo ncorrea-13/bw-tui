@@ -632,6 +632,19 @@ impl App {
         self.spawn(move || BwEvent::Generated(bw::generate(&opts)));
     }
 
+    pub fn apply_generator_option_key(&mut self, code: crossterm::event::KeyCode) {
+        use crossterm::event::KeyCode;
+        match code {
+            KeyCode::Up => self.generator.opts.length = self.generator.opts.length.saturating_add(1).min(128),
+            KeyCode::Down => self.generator.opts.length = self.generator.opts.length.saturating_sub(1).max(5),
+            KeyCode::Char('u') => self.generator.opts.uppercase = !self.generator.opts.uppercase,
+            KeyCode::Char('l') => self.generator.opts.lowercase = !self.generator.opts.lowercase,
+            KeyCode::Char('n') => self.generator.opts.numbers = !self.generator.opts.numbers,
+            KeyCode::Char('s') => self.generator.opts.special = !self.generator.opts.special,
+            _ => {}
+        }
+    }
+
     pub fn copy_generated(&mut self) {
         let Some(pw) = self.generator.result.clone() else {
             return;

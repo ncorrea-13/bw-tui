@@ -60,6 +60,9 @@ pub fn draw(frame: &mut Frame, app: &App) {
             app.spinner(),
         ),
         Screen::Loading => draw_loading(frame, app),
+        Screen::Main if app.item_form.as_ref().is_some_and(|f| f.generator_open) => {
+            draw_item_form_password_picker(frame, app)
+        }
         Screen::Main => draw_main(frame, app),
     }
 }
@@ -403,7 +406,7 @@ fn draw_detail_popup(frame: &mut Frame, app: &App, item: &Item, area: Rect) {
 }
 
 fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rect) {
-    let width = 60u16.min(area.width.saturating_sub(2)).max(20);
+    let width = 66u16.min(area.width.saturating_sub(2)).max(20);
     let height = 9u16.clamp(8, area.height.saturating_sub(2).max(8));
     let rect = centered(area, width, height);
 
@@ -455,7 +458,8 @@ fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rect) {
     }
 
     frame.render_widget(
-        Paragraph::new("Tab: next field   Enter: save   Esc: cancel").style(Style::default().fg(MUTED)),
+        Paragraph::new("Tab: field  Enter: save  Ctrl+G: random password  Esc: cancel")
+            .style(Style::default().fg(MUTED)),
         rows[5],
     );
 }
@@ -570,7 +574,15 @@ fn item_detail_lines(app: &App, item: &Item) -> Vec<Line<'static>> {
 
 fn draw_generator_tab(frame: &mut Frame, app: &App, area: Rect) {
     let inner = panel(frame, area, "Password generator", 60, 12);
+    draw_generator_options(frame, app, inner, "(c: copy)");
+}
 
+fn draw_item_form_password_picker(frame: &mut Frame, app: &App) {
+    let inner = boxed(frame, "bw-tui — generate password", 60, 12);
+    draw_generator_options(frame, app, inner, "(Enter: use this password, g: regenerate)");
+}
+
+fn draw_generator_options(frame: &mut Frame, app: &App, inner: Rect, result_hint: &str) {
     let opts = &app.generator.opts;
     let toggle = |on: bool| if on { Style::default().fg(OK) } else { Style::default().fg(MUTED) };
 
@@ -609,7 +621,7 @@ fn draw_generator_tab(frame: &mut Frame, app: &App, area: Rect) {
         frame.render_widget(Paragraph::new(format!("⚠ {err}")).style(Style::default().fg(ERROR)), chunks[5]);
     } else if let Some(pw) = &app.generator.result {
         frame.render_widget(
-            Paragraph::new(format!("> {pw}  (c: copy)")).style(Style::default().fg(WARN).add_modifier(Modifier::BOLD)),
+            Paragraph::new(format!("> {pw}  {result_hint}")).style(Style::default().fg(WARN).add_modifier(Modifier::BOLD)),
             chunks[5],
         );
     } else {
@@ -678,7 +690,7 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
 
 fn draw_help(frame: &mut Frame, app: &App, area: Rect) {
     let help = match app.tab {
-        Tab::Vault if app.item_form.is_some() => "Tab: next field  Enter: save  Esc: cancel",
+        Tab::Vault if app.item_form.is_some() => "Tab: field  Enter: save  Ctrl+G: random password  Esc: cancel",
         Tab::Vault if app.detail_open => "Enter: copy password  u: username  t: TOTP  r: reveal  Esc: close",
         Tab::Vault if app.vault_mode == VaultMode::Search => "type to filter  Enter: confirm  Esc: cancel",
         Tab::Vault => {
