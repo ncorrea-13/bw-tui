@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - run: cargo build --verbose
+      - run: cargo test --verbose
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: shellcheck bash/bw-tui.sh scripts/package.sh
+      - run: python3 -m py_compile scripts/smoke_test.py

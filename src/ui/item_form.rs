@@ -82,7 +82,7 @@ pub(super) fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rec
 
     let error_row = visible_fields.len();
     if let Some(err) = &form.error {
-        frame.render_widget(Paragraph::new(format!("⚠ {err}")).style(Style::default().fg(ERROR)), rows[error_row]);
+        frame.render_widget(Paragraph::new(format!("\u{f071} {err}")).style(Style::default().fg(ERROR)), rows[error_row]);
     }
 
     let plain_hint_row = error_row + 2;

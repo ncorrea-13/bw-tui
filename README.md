@@ -10,16 +10,17 @@ There are two ways to use this project, in two different folders: a full Rust TU
 
 ## Dependencies
 
-| Program                                     | Purpose                 | Needed for     |
-| ------------------------------------------- | ----------------------- | -------------- |
-| [`bw` CLI](https://bitwarden.com/help/cli/) | talks to Bitwarden      | both versions  |
-| Rust toolchain                              | build                   | Rust version   |
-| `fzf`                                       | item picker             | Bash version   |
-| `jq`                                        | parse config/`bw` JSON  | Bash version   |
-| `wl-clipboard`                              | clipboard               | native Wayland |
-| `cliphist`                                  | clear clipboard history | native Wayland |
-| `libnotify`                                 | desktop notifications   | native Wayland |
-| `clip.exe`                                  | clipboard               | WSL2           |
+| Program                                     | Purpose                 | Needed for |
+| ------------------------------------------- | ----------------------- | ---------- |
+| [`bw` CLI](https://bitwarden.com/help/cli/) | talks to Bitwarden      | both       |
+| Rust toolchain                              | build                   | Rust       |
+| `fzf`                                       | item picker             | Bash       |
+| `jq`                                        | parse config/`bw` JSON  | Bash       |
+| `wl-clipboard`                              | clipboard               | Wayland    |
+| `cliphist`                                  | clear clipboard history | Wayland    |
+| `libnotify`                                 | desktop notifications   | Wayland    |
+| `clip.exe`                                  | clipboard               | WSL2       |
+| A [Nerd Font](https://www.nerdfonts.com/)   | UI icons                | both       |
 
 ---
 
@@ -30,7 +31,7 @@ There are two ways to use this project, in two different folders: a full Rust TU
 - **Full session flow**: on startup it checks `bw status` and shows the right screen: server setup if you're not logged in at all, email + password (+ 2FA) if you need to log in, or just the master password if the CLI is already logged in but locked. This runs on a background thread, so the UI doesn't freeze while `bw` is working, you get a spinner instead.
 - **Session cache compatible with the bash version**: it reuses `~/.cache/bw-tui/session`, so if you already unlocked the vault with the bash script, it picks up that session instead of asking again.
 - **Popup-friendly Vault tab**: one full-width item list by default. Folders show in a top bar and item detail opens as a popup (`Enter`) instead of taking a whole column.
-- **Create and edit items**: logins, secure notes, and cards, without leaving the Vault tab (`n` to create, `e` on the detail popup to edit). The form has its own password generator (`Ctrl+G`) sharing the Generator tab's settings, and `Ctrl+R` to pull up a login's current password while editing.
+- **Create and edit items**: logins, secure notes, cards, and identities, without leaving the Vault tab (`n` to create, `e` on the detail popup to edit). The form has its own password generator (`Ctrl+G`) sharing the Generator tab's settings, and `Ctrl+R` to pull up a login's current password while editing.
 - **Vim-style keys** in the vault list: `j`/`k` to move, `gg`/`G` to jump to top/bottom, `h`/`l` to switch folders, `/` to search.
 - **Generator tab**: wraps `bw generate` with length and character-set options.
 - **Account tab**: shows the server, account email and last sync time, and lets you sync, lock or log out.

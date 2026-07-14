@@ -88,10 +88,10 @@ if [ -f "$session_file" ]; then
 fi
 
 if [ -z "$BW_SESSION" ]; then
-  echo "🔒 Bitwarden is locked, enter your master password:"
+  echo " Bitwarden is locked, enter your master password:"
   BW_SESSION=$($BW_CMD unlock --raw)
   if [ -z "$BW_SESSION" ]; then
-    echo "❌ Could not unlock Bitwarden."
+    echo " Could not unlock Bitwarden."
     read -r -p "Press Enter to close..."
     exit 1
   fi
@@ -113,7 +113,7 @@ fi
 export BW_SESSION
 
 if [ -z "$items_json" ] || [ "$items_json" = "[]" ]; then
-  echo "⚠️ No items found in Bitwarden."
+  echo " No items found in Bitwarden."
   read -r -p "Press Enter to close..."
   exit 1
 fi
@@ -131,7 +131,7 @@ selection=$(
 )
 
 if [ -z "$selection" ]; then
-  echo "❌ No item selected."
+  echo " No item selected."
   exit 0
 fi
 
@@ -141,7 +141,7 @@ case "$item_type" in
 1)
   password=$($BW_CMD get password "$selection" --session "$BW_SESSION" 2>/dev/null)
   if [ -z "$password" ]; then
-    echo "⚠️ Could not get the password for item ID '$selection'."
+    echo " Could not get the password for item ID '$selection'."
     read -r -p "Press Enter to close..."
     exit 1
   fi
@@ -150,7 +150,7 @@ case "$item_type" in
 2)
   notes=$(echo "$items_json" | jq -r --arg id "$selection" '.[] | select(.id==$id) | .notes // empty')
   if [ -z "$notes" ]; then
-    echo "⚠️ That note has no content."
+    echo " That note has no content."
     read -r -p "Press Enter to close..."
     exit 1
   fi
@@ -168,19 +168,19 @@ case "$item_type" in
     label="CVV"
     ;;
   *)
-    echo "❌ No field selected."
+    echo " No field selected."
     exit 0
     ;;
   esac
   if [ -z "$value" ]; then
-    echo "⚠️ That card has no data on file for that field."
+    echo " That card has no data on file for that field."
     read -r -p "Press Enter to close..."
     exit 1
   fi
   copy_and_autoclear "$value" "$label"
   ;;
 *)
-  echo "⚠️ This item type isn't supported yet."
+  echo " This item type isn't supported yet."
   read -r -p "Press Enter to close..."
   exit 1
   ;;

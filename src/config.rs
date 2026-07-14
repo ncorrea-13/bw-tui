@@ -47,14 +47,14 @@ fn load_or_create() -> Config {
         Ok(text) => match serde_json::from_str(&text) {
             Ok(cfg) => cfg,
             Err(e) => {
-                eprintln!("⚠️ could not parse {}: {e}, using defaults", path.display());
+                eprintln!("\u{f071} could not parse {}: {e}, using defaults", path.display());
                 Config::default()
             }
         },
         Err(_) => {
             let cfg = Config::default();
             if let Err(e) = write_default(&path, &cfg) {
-                eprintln!("⚠️ could not create {}: {e}", path.display());
+                eprintln!("\u{f071} could not create {}: {e}", path.display());
             }
             cfg
         }

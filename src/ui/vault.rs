@@ -88,19 +88,22 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect) {
         .iter()
         .map(|&i| {
             let item = &app.items[i];
-            let user = item.username().unwrap_or("-");
-            let line = Line::from(vec![
+            let mut spans = vec![
+                Span::styled(item.type_icon(), Style::default().fg(MUTED)),
+                Span::raw(" "),
                 Span::styled(item.name.clone(), Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw("  "),
-                Span::styled(user.to_string(), Style::default().fg(MUTED)),
-            ]);
-            ListItem::new(line)
+            ];
+            if let Some(user) = item.username() {
+                spans.push(Span::raw("  "));
+                spans.push(Span::styled(user.to_string(), Style::default().fg(MUTED)));
+            }
+            ListItem::new(Line::from(spans))
         })
         .collect();
 
     let list = List::new(items)
         .highlight_style(Style::default().bg(ACCENT).fg(BG).add_modifier(Modifier::BOLD))
-        .highlight_symbol("➤ ");
+        .highlight_symbol("\u{f054} ");
 
     let mut state = ListState::default();
     if !app.filtered.is_empty() {
@@ -153,7 +156,7 @@ fn detail_footer(item: &Item) -> String {
     if item.item_type != 2 && has_notes {
         parts.push("n: notes");
     }
-    if matches!(item.item_type, 1..=3) {
+    if matches!(item.item_type, 1..=4) {
         parts.push("e: edit");
     }
     parts.push("Esc: close");

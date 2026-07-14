@@ -34,7 +34,7 @@ pub(super) fn draw_server_config(frame: &mut Frame, url: &str, error: Option<&st
         );
     } else if let Some(err) = error {
         frame.render_widget(
-            Paragraph::new(format!("⚠ {err}")).style(Style::default().fg(ERROR)),
+            Paragraph::new(format!("\u{f071} {err}")).style(Style::default().fg(ERROR)),
             chunks[2],
         );
     }
@@ -69,7 +69,7 @@ pub(super) fn draw_login(
         if busy {
             frame.render_widget(Paragraph::new(format!("{spinner} Verifying...")).style(Style::default().fg(WARN)), chunks[2]);
         } else if let Some(err) = error {
-            frame.render_widget(Paragraph::new(format!("⚠ {err}")).style(Style::default().fg(ERROR)), chunks[2]);
+            frame.render_widget(Paragraph::new(format!("\u{f071} {err}")).style(Style::default().fg(ERROR)), chunks[2]);
         }
         frame.render_widget(
             Paragraph::new("Enter: verify   Esc: quit").style(Style::default().fg(MUTED)),
@@ -107,7 +107,7 @@ pub(super) fn draw_login(
     if busy {
         frame.render_widget(Paragraph::new(format!("{spinner} Logging in...")).style(Style::default().fg(WARN)), chunks[2]);
     } else if let Some(err) = error {
-        frame.render_widget(Paragraph::new(format!("⚠ {err}")).style(Style::default().fg(ERROR)), chunks[2]);
+        frame.render_widget(Paragraph::new(format!("\u{f071} {err}")).style(Style::default().fg(ERROR)), chunks[2]);
     }
 
     frame.render_widget(
@@ -147,7 +147,7 @@ pub(super) fn draw_unlock(
     if busy {
         frame.render_widget(Paragraph::new(format!("{spinner} Unlocking...")).style(Style::default().fg(WARN)), chunks[2]);
     } else if let Some(err) = error {
-        frame.render_widget(Paragraph::new(format!("⚠ {err}")).style(Style::default().fg(ERROR)), chunks[2]);
+        frame.render_widget(Paragraph::new(format!("\u{f071} {err}")).style(Style::default().fg(ERROR)), chunks[2]);
     }
 
     frame.render_widget(

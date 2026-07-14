@@ -231,7 +231,7 @@ impl App {
                 };
                 self.server_status = Some(status);
             }
-            bw::StartOutcome::Error(e) => self.set_status(format!("⚠️ {e}")),
+            bw::StartOutcome::Error(e) => self.set_status(format!("\u{f071} {e}")),
         }
     }
 
@@ -260,7 +260,7 @@ impl App {
                 self.status = None;
             }
         if matches!(self.screen, Screen::Main) && self.session_age() > config::get().session_max_age_secs {
-            self.relock("🔒 Session expired, enter your master password again:");
+            self.relock("\u{f023} Session expired, enter your master password again:");
         }
     }
 
@@ -475,7 +475,7 @@ impl App {
             return;
         };
         if item.item_type != 1 {
-            self.set_status("⚠️ This item has no password");
+            self.set_status("\u{f071} This item has no password");
             return;
         }
         let Some(session) = self.session.clone() else {
@@ -494,15 +494,15 @@ impl App {
             return;
         };
         let Some(username) = item.username().map(|s| s.to_string()) else {
-            self.set_status("⚠️ This item has no username");
+            self.set_status("\u{f071} This item has no username");
             return;
         };
         let name = item.name.clone();
         if let Err(e) = clipboard::copy(&username) {
-            self.set_status(format!("⚠️ {e}"));
+            self.set_status(format!("\u{f071} {e}"));
             return;
         }
-        self.set_status(format!("✅ Username for '{name}' copied"));
+        self.set_status(format!("\u{f00c} Username for '{name}' copied"));
     }
 
     pub fn copy_primary_secret(&mut self) {
@@ -513,7 +513,7 @@ impl App {
             1 => self.copy_password(),
             2 => self.copy_notes(),
             3 => self.copy_card_number(),
-            _ => self.set_status("⚠️ Nothing to copy for this item"),
+            _ => self.set_status("\u{f071} Nothing to copy for this item"),
         }
     }
 
@@ -522,17 +522,17 @@ impl App {
             return;
         };
         let Some(number) = item.card.as_ref().and_then(|c| c.number.clone()) else {
-            self.set_status("⚠️ This card has no number on file");
+            self.set_status("\u{f071} This card has no number on file");
             return;
         };
         let name = item.name.clone();
         if let Err(e) = clipboard::copy(&number) {
-            self.set_status(format!("⚠️ {e}"));
+            self.set_status(format!("\u{f071} {e}"));
             return;
         }
         let secs = config::get().clipboard_clear_secs;
         let note = clipboard::autoclear_note(secs);
-        self.set_status(format!("✅ Card number for '{name}' copied{note}"));
+        self.set_status(format!("\u{f00c} Card number for '{name}' copied{note}"));
         clipboard::spawn_autoclear(number, "card number");
     }
 
@@ -541,17 +541,17 @@ impl App {
             return;
         };
         let Some(notes) = item.notes.clone().filter(|n| !n.is_empty()) else {
-            self.set_status("⚠️ This item has no notes");
+            self.set_status("\u{f071} This item has no notes");
             return;
         };
         let name = item.name.clone();
         if let Err(e) = clipboard::copy(&notes) {
-            self.set_status(format!("⚠️ {e}"));
+            self.set_status(format!("\u{f071} {e}"));
             return;
         }
         let secs = config::get().clipboard_clear_secs;
         let note = clipboard::autoclear_note(secs);
-        self.set_status(format!("✅ Notes for '{name}' copied{note}"));
+        self.set_status(format!("\u{f00c} Notes for '{name}' copied{note}"));
         clipboard::spawn_autoclear(notes, "notes");
     }
 
@@ -566,7 +566,7 @@ impl App {
             return;
         };
         if !item.has_totp() {
-            self.set_status("⚠️ This item has no TOTP");
+            self.set_status("\u{f071} This item has no TOTP");
             return;
         }
         self.busy = true;
@@ -603,13 +603,13 @@ impl App {
             }
             3 => {
                 let Some(number) = item.card.as_ref().and_then(|c| c.number.clone()) else {
-                    self.set_status("⚠️ This card has no number on file");
+                    self.set_status("\u{f071} This card has no number on file");
                     return;
                 };
                 self.reveal_cvv = item.card.as_ref().and_then(|c| c.code.clone());
                 self.reveal = Some((item.id, number));
             }
-            _ => self.set_status("⚠️ Nothing to reveal for this item"),
+            _ => self.set_status("\u{f071} Nothing to reveal for this item"),
         }
     }
 
@@ -643,12 +643,12 @@ impl App {
             return;
         };
         if let Err(e) = clipboard::copy(&pw) {
-            self.set_status(format!("⚠️ {e}"));
+            self.set_status(format!("\u{f071} {e}"));
             return;
         }
         let secs = config::get().clipboard_clear_secs;
         let note = clipboard::autoclear_note(secs);
-        self.set_status(format!("✅ Generated password copied{note}"));
+        self.set_status(format!("\u{f00c} Generated password copied{note}"));
         clipboard::spawn_autoclear(pw, "generated");
     }
 
@@ -667,7 +667,7 @@ impl App {
     }
 
     pub fn lock_now(&mut self) {
-        self.relock("🔒 Vault locked, enter your master password:");
+        self.relock("\u{f023} Vault locked, enter your master password:");
     }
 
     pub fn logout_now(&mut self) {
