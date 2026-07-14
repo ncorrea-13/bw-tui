@@ -270,7 +270,7 @@ impl App {
             return;
         };
         if !matches!(item.item_type, 1..=4) {
-            self.set_status("⚠️ Editing is not supported for this item type");
+            self.set_status("\u{f071} Editing is not supported for this item type");
             return;
         }
         self.item_form = Some(ItemForm::for_editing(&item));

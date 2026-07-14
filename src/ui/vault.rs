@@ -103,7 +103,7 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect) {
 
     let list = List::new(items)
         .highlight_style(Style::default().bg(ACCENT).fg(BG).add_modifier(Modifier::BOLD))
-        .highlight_symbol("➤ ");
+        .highlight_symbol("\u{f054} ");
 
     let mut state = ListState::default();
     if !app.filtered.is_empty() {

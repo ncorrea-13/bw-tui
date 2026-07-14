@@ -51,7 +51,7 @@ impl App {
                 match result {
                     Ok(bw::LoginFlowResult::LoggedIn(load)) => {
                         self.enter_vault(load.key, load.ts, load.items, load.folders);
-                        self.set_status("🔓 Logged in");
+                        self.set_status("\u{f09c} Logged in");
                     }
                     Ok(bw::LoginFlowResult::TwoFactorRequired) => {
                         if let Screen::Login { focus, awaiting_2fa, code, error, busy, .. } = &mut self.screen {
@@ -82,7 +82,7 @@ impl App {
                 match result {
                     Ok(load) => {
                         self.enter_vault(load.key, load.ts, load.items, load.folders);
-                        self.set_status("🔓 Vault unlocked");
+                        self.set_status("\u{f09c} Vault unlocked");
                     }
                     Err(e) => {
                         if let Screen::Unlock { password, error, busy, .. } = &mut self.screen {
@@ -101,9 +101,9 @@ impl App {
                         self.items = load.items;
                         self.folders = load.folders;
                         self.refilter();
-                        self.set_status("🔄 List refreshed");
+                        self.set_status("\u{f021} List refreshed");
                     }
-                    Err(e) => self.set_status(format!("⚠️ Could not refresh: {e}")),
+                    Err(e) => self.set_status(format!("\u{f071} Could not refresh: {e}")),
                 }
             }
             BwEvent::PasswordCopied { item_name, result } => {
@@ -112,17 +112,17 @@ impl App {
                 match result {
                     Ok(pw) if !pw.is_empty() => {
                         if let Err(e) = clipboard::copy(&pw) {
-                            self.set_status(format!("⚠️ {e}"));
+                            self.set_status(format!("\u{f071} {e}"));
                             return;
                         }
                         clipboard::notify(&format!("✅ Password copied: {item_name}"));
                         let secs = crate::config::get().clipboard_clear_secs;
                         let note = clipboard::autoclear_note(secs);
-                        self.set_status(format!("✅ Password for '{item_name}' copied{note}"));
+                        self.set_status(format!("\u{f00c} Password for '{item_name}' copied{note}"));
                         clipboard::spawn_autoclear(pw, "password");
                     }
-                    Ok(_) => self.set_status("⚠️ This item has no password"),
-                    Err(e) => self.set_status(format!("⚠️ {e}")),
+                    Ok(_) => self.set_status("\u{f071} This item has no password"),
+                    Err(e) => self.set_status(format!("\u{f071} {e}")),
                 }
             }
             BwEvent::TotpCopied { item_name, result } => {
@@ -131,16 +131,16 @@ impl App {
                 match result {
                     Ok(code) if !code.is_empty() => {
                         if let Err(e) = clipboard::copy(&code) {
-                            self.set_status(format!("⚠️ {e}"));
+                            self.set_status(format!("\u{f071} {e}"));
                             return;
                         }
                         let secs = crate::config::get().clipboard_clear_secs;
                         let note = clipboard::autoclear_note(secs);
-                        self.set_status(format!("✅ TOTP code for '{item_name}' copied{note}"));
+                        self.set_status(format!("\u{f00c} TOTP code for '{item_name}' copied{note}"));
                         clipboard::spawn_autoclear(code, "TOTP");
                     }
-                    Ok(_) => self.set_status("⚠️ Could not generate the TOTP code"),
-                    Err(e) => self.set_status(format!("⚠️ {e}")),
+                    Ok(_) => self.set_status("\u{f071} Could not generate the TOTP code"),
+                    Err(e) => self.set_status(format!("\u{f071} {e}")),
                 }
             }
             BwEvent::Revealed { item_id, result } => {
@@ -148,7 +148,7 @@ impl App {
                 self.busy_label = None;
                 match result {
                     Ok(pw) => self.reveal = Some((item_id, pw)),
-                    Err(e) => self.set_status(format!("⚠️ {e}")),
+                    Err(e) => self.set_status(format!("\u{f071} {e}")),
                 }
             }
             BwEvent::Generated(result) => {
@@ -173,9 +173,9 @@ impl App {
                         self.items = load.items;
                         self.folders = load.folders;
                         self.refilter();
-                        self.set_status("🔄 Synced with server");
+                        self.set_status("\u{f021} Synced with server");
                     }
-                    Err(e) => self.set_status(format!("⚠️ {e}")),
+                    Err(e) => self.set_status(format!("\u{f071} {e}")),
                 }
             }
             BwEvent::LoggedOut(result) => {
@@ -183,7 +183,7 @@ impl App {
                 self.busy_label = None;
                 match result {
                     Ok(outcome) => self.apply_start_outcome(outcome),
-                    Err(e) => self.set_status(format!("⚠️ {e}")),
+                    Err(e) => self.set_status(format!("\u{f071} {e}")),
                 }
             }
             BwEvent::ItemCreated(result) => {
@@ -198,7 +198,7 @@ impl App {
                             self.selected = pos;
                         }
                         self.item_form = None;
-                        self.set_status("✅ Item created");
+                        self.set_status("\u{f00c} Item created");
                     }
                     Err(e) => {
                         if let Some(form) = &mut self.item_form {
@@ -222,7 +222,7 @@ impl App {
                         }
                         self.item_form = None;
                         self.detail_open = false;
-                        self.set_status("✅ Item updated");
+                        self.set_status("\u{f00c} Item updated");
                     }
                     Err(e) => {
                         if let Some(form) = &mut self.item_form {

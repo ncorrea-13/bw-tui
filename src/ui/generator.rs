@@ -72,7 +72,7 @@ fn draw_generator_options(
             chunks[5],
         );
     } else if let Some(err) = &app.generator.error {
-        frame.render_widget(Paragraph::new(format!("⚠ {err}")).style(Style::default().fg(ERROR)), chunks[5]);
+        frame.render_widget(Paragraph::new(format!("\u{f071} {err}")).style(Style::default().fg(ERROR)), chunks[5]);
     } else if let Some(pw) = &app.generator.result {
         let result_line = if result_hint.is_empty() { format!("> {pw}") } else { format!("> {pw}  {result_hint}") };
         frame.render_widget(
