@@ -7,6 +7,7 @@ pub enum ItemKind {
     Login,
     Note,
     Card,
+    Identity,
 }
 
 impl ItemKind {
@@ -14,6 +15,7 @@ impl ItemKind {
         match item_type {
             2 => ItemKind::Note,
             3 => ItemKind::Card,
+            4 => ItemKind::Identity,
             _ => ItemKind::Login,
         }
     }
@@ -23,6 +25,7 @@ impl ItemKind {
             ItemKind::Login => 1,
             ItemKind::Note => 2,
             ItemKind::Card => 3,
+            ItemKind::Identity => 4,
         }
     }
 
@@ -31,6 +34,7 @@ impl ItemKind {
             ItemKind::Login => "login",
             ItemKind::Note => "note",
             ItemKind::Card => "card",
+            ItemKind::Identity => "identity",
         }
     }
 
@@ -38,15 +42,17 @@ impl ItemKind {
         match self {
             ItemKind::Login => ItemKind::Note,
             ItemKind::Note => ItemKind::Card,
-            ItemKind::Card => ItemKind::Login,
+            ItemKind::Card => ItemKind::Identity,
+            ItemKind::Identity => ItemKind::Login,
         }
     }
 
     fn prev(self) -> Self {
         match self {
-            ItemKind::Login => ItemKind::Card,
+            ItemKind::Login => ItemKind::Identity,
             ItemKind::Note => ItemKind::Login,
             ItemKind::Card => ItemKind::Note,
+            ItemKind::Identity => ItemKind::Card,
         }
     }
 
@@ -66,6 +72,14 @@ impl ItemKind {
                 ItemFormField::Code,
                 ItemFormField::Notes,
             ],
+            ItemKind::Identity => &[
+                ItemFormField::Name,
+                ItemFormField::FirstName,
+                ItemFormField::LastName,
+                ItemFormField::Email,
+                ItemFormField::Phone,
+                ItemFormField::Notes,
+            ],
         }
     }
 }
@@ -82,6 +96,10 @@ pub enum ItemFormField {
     ExpMonth,
     ExpYear,
     Code,
+    FirstName,
+    LastName,
+    Email,
+    Phone,
 }
 
 impl ItemFormField {
@@ -97,6 +115,10 @@ impl ItemFormField {
             ItemFormField::ExpMonth => "Exp. month",
             ItemFormField::ExpYear => "Exp. year",
             ItemFormField::Code => "CVV",
+            ItemFormField::FirstName => "First name",
+            ItemFormField::LastName => "Last name",
+            ItemFormField::Email => "Email",
+            ItemFormField::Phone => "Phone",
         }
     }
 
@@ -130,6 +152,10 @@ pub struct ItemForm {
     pub exp_month: String,
     pub exp_year: String,
     pub code: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub email: String,
+    pub phone: String,
     pub generator_open: bool,
     pub error: Option<String>,
 }
@@ -151,6 +177,10 @@ impl ItemForm {
             exp_month: String::new(),
             exp_year: String::new(),
             code: String::new(),
+            first_name: String::new(),
+            last_name: String::new(),
+            email: String::new(),
+            phone: String::new(),
             generator_open: false,
             error: None,
         }
@@ -158,6 +188,7 @@ impl ItemForm {
 
     fn for_editing(item: &Item) -> Self {
         let card = item.card.as_ref();
+        let identity = item.identity.as_ref();
         Self {
             mode: ItemFormMode::Edit { id: item.id.clone() },
             kind: ItemKind::from_item_type(item.item_type),
@@ -173,6 +204,10 @@ impl ItemForm {
             exp_month: card.and_then(|c| c.exp_month.clone()).unwrap_or_default(),
             exp_year: card.and_then(|c| c.exp_year.clone()).unwrap_or_default(),
             code: card.and_then(|c| c.code.clone()).unwrap_or_default(),
+            first_name: identity.and_then(|i| i.first_name.clone()).unwrap_or_default(),
+            last_name: identity.and_then(|i| i.last_name.clone()).unwrap_or_default(),
+            email: identity.and_then(|i| i.email.clone()).unwrap_or_default(),
+            phone: identity.and_then(|i| i.phone.clone()).unwrap_or_default(),
             generator_open: false,
             error: None,
         }
@@ -198,6 +233,10 @@ impl ItemForm {
             ItemFormField::ExpMonth => &mut self.exp_month,
             ItemFormField::ExpYear => &mut self.exp_year,
             ItemFormField::Code => &mut self.code,
+            ItemFormField::FirstName => &mut self.first_name,
+            ItemFormField::LastName => &mut self.last_name,
+            ItemFormField::Email => &mut self.email,
+            ItemFormField::Phone => &mut self.phone,
         }
     }
 
@@ -213,6 +252,10 @@ impl ItemForm {
             ItemFormField::ExpMonth => &self.exp_month,
             ItemFormField::ExpYear => &self.exp_year,
             ItemFormField::Code => &self.code,
+            ItemFormField::FirstName => &self.first_name,
+            ItemFormField::LastName => &self.last_name,
+            ItemFormField::Email => &self.email,
+            ItemFormField::Phone => &self.phone,
         }
     }
 }
@@ -226,8 +269,8 @@ impl App {
         let Some(item) = self.selected_item().cloned() else {
             return;
         };
-        if !matches!(item.item_type, 1..=3) {
-            self.set_status("⚠️ Editing is only supported for logins, notes, and cards right now");
+        if !matches!(item.item_type, 1..=4) {
+            self.set_status("⚠️ Editing is not supported for this item type");
             return;
         }
         self.item_form = Some(ItemForm::for_editing(&item));
@@ -312,6 +355,12 @@ impl App {
             exp_year: opt(&form.exp_year),
             code: opt(&form.code),
         });
+        let identity = matches!(kind, ItemKind::Identity).then(|| bw::NewIdentity {
+            first_name: opt(&form.first_name),
+            last_name: opt(&form.last_name),
+            email: opt(&form.email),
+            phone: opt(&form.phone),
+        });
         let editing_id = match &form.mode {
             ItemFormMode::Create => None,
             ItemFormMode::Edit { id } => Some(id.clone()),
@@ -331,7 +380,7 @@ impl App {
         match editing_id {
             Some(id) => {
                 self.busy_label = Some("Saving item…".to_string());
-                let patch = bw::ItemPatch { name, notes, folder_id: None, login, card };
+                let patch = bw::ItemPatch { name, notes, folder_id: None, login, card, identity };
                 self.spawn(move || BwEvent::ItemEdited(bw::edit_item(&id, &patch, &session)));
             }
             None => {
@@ -344,6 +393,7 @@ impl App {
                     notes,
                     login,
                     card,
+                    identity,
                     secure_note,
                 };
                 self.spawn(move || BwEvent::ItemCreated(bw::create_item(&new_item, &session)));

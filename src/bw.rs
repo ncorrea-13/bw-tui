@@ -151,6 +151,16 @@ pub struct NewLogin {
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
+pub struct NewIdentity {
+    #[serde(rename = "firstName")]
+    pub first_name: Option<String>,
+    #[serde(rename = "lastName")]
+    pub last_name: Option<String>,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct NewCard {
     #[serde(rename = "cardholderName")]
     pub cardholder_name: Option<String>,
@@ -179,6 +189,7 @@ pub struct NewItem {
     pub notes: Option<String>,
     pub login: Option<NewLogin>,
     pub card: Option<NewCard>,
+    pub identity: Option<NewIdentity>,
     #[serde(rename = "secureNote")]
     pub secure_note: Option<SecureNoteData>,
 }
@@ -191,6 +202,7 @@ pub struct ItemPatch {
     pub folder_id: Option<String>,
     pub login: Option<NewLogin>,
     pub card: Option<NewCard>,
+    pub identity: Option<NewIdentity>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -442,6 +454,26 @@ pub fn edit_item(id: &str, patch: &ItemPatch, session: &str) -> Result<Item> {
         }
         if let Some(code) = &card_patch.code {
             card_fields.insert("code".to_string(), serde_json::json!(code));
+        }
+    }
+
+    if let Some(identity_patch) = &patch.identity {
+        let identity_fields = item_fields
+            .entry("identity".to_string())
+            .or_insert_with(|| serde_json::json!({}))
+            .as_object_mut()
+            .context("unexpected identity shape from bw")?;
+        if let Some(first_name) = &identity_patch.first_name {
+            identity_fields.insert("firstName".to_string(), serde_json::json!(first_name));
+        }
+        if let Some(last_name) = &identity_patch.last_name {
+            identity_fields.insert("lastName".to_string(), serde_json::json!(last_name));
+        }
+        if let Some(email) = &identity_patch.email {
+            identity_fields.insert("email".to_string(), serde_json::json!(email));
+        }
+        if let Some(phone) = &identity_patch.phone {
+            identity_fields.insert("phone".to_string(), serde_json::json!(phone));
         }
     }
 

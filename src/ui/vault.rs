@@ -153,7 +153,7 @@ fn detail_footer(item: &Item) -> String {
     if item.item_type != 2 && has_notes {
         parts.push("n: notes");
     }
-    if matches!(item.item_type, 1..=3) {
+    if matches!(item.item_type, 1..=4) {
         parts.push("e: edit");
     }
     parts.push("Esc: close");
