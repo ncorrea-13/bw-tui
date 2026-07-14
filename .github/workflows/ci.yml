@@ -15,4 +15,5 @@ jobs:
       - run: cargo build --verbose
       - run: cargo test --verbose
       - run: cargo clippy --all-targets -- -D warnings
-      - run: shellcheck bash/bw-tui.sh
+      - run: shellcheck bash/bw-tui.sh scripts/package.sh
+      - run: python3 -m py_compile scripts/smoke_test.py
