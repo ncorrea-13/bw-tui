@@ -33,7 +33,7 @@ Shows everything about the selected item: for a login, that's username/URL/TOTP 
 
 ## Create / edit item form
 
-Opened with `n` from the vault list (new item) or `e` from the item detail popup (edit the selected login, note, or card). Which fields show up depends on the item type; you can't change an existing item's type, only pick one while creating.
+Opened with `n` from the vault list (new item) or `e` from the item detail popup (edit the selected login, note, card, or identity). Which fields show up depends on the item type; you can't change an existing item's type, only pick one while creating.
 
 | Key                 | Action                                                    |
 | ------------------- | --------------------------------------------------------- |
