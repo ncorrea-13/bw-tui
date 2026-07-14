@@ -88,13 +88,16 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect) {
         .iter()
         .map(|&i| {
             let item = &app.items[i];
-            let user = item.username().unwrap_or("-");
-            let line = Line::from(vec![
+            let mut spans = vec![
+                Span::styled(item.type_icon(), Style::default().fg(MUTED)),
+                Span::raw(" "),
                 Span::styled(item.name.clone(), Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw("  "),
-                Span::styled(user.to_string(), Style::default().fg(MUTED)),
-            ]);
-            ListItem::new(line)
+            ];
+            if let Some(user) = item.username() {
+                spans.push(Span::raw("  "));
+                spans.push(Span::styled(user.to_string(), Style::default().fg(MUTED)));
+            }
+            ListItem::new(Line::from(spans))
         })
         .collect();
 

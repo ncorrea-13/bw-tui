@@ -98,6 +98,18 @@ impl Item {
         }
     }
 
+    /// Nerd Font glyph for the item's type (Font Awesome subset: key, sticky-note,
+    /// credit-card, address-card). Requires a patched Nerd Font to render correctly.
+    pub fn type_icon(&self) -> &'static str {
+        match self.item_type {
+            1 => "\u{f084}",
+            2 => "\u{f249}",
+            3 => "\u{f09d}",
+            4 => "\u{f2bb}",
+            _ => "?",
+        }
+    }
+
     pub fn identity_summary(&self) -> Option<String> {
         let i = self.identity.as_ref()?;
         let name = [i.first_name.as_deref(), i.last_name.as_deref()]
