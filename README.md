@@ -10,16 +10,17 @@ There are two ways to use this project, in two different folders: a full Rust TU
 
 ## Dependencies
 
-| Program                                     | Purpose                 | Needed for     |
-| ------------------------------------------- | ----------------------- | -------------- |
-| [`bw` CLI](https://bitwarden.com/help/cli/) | talks to Bitwarden      | both versions  |
-| Rust toolchain                              | build                   | Rust version   |
-| `fzf`                                       | item picker             | Bash version   |
-| `jq`                                        | parse config/`bw` JSON  | Bash version   |
-| `wl-clipboard`                              | clipboard               | native Wayland |
-| `cliphist`                                  | clear clipboard history | native Wayland |
-| `libnotify`                                 | desktop notifications   | native Wayland |
-| `clip.exe`                                  | clipboard               | WSL2           |
+| Program                                     | Purpose                 | Needed for |
+| ------------------------------------------- | ----------------------- | ---------- |
+| [`bw` CLI](https://bitwarden.com/help/cli/) | talks to Bitwarden      | both       |
+| Rust toolchain                              | build                   | Rust       |
+| `fzf`                                       | item picker             | Bash       |
+| `jq`                                        | parse config/`bw` JSON  | Bash       |
+| `wl-clipboard`                              | clipboard               | Wayland    |
+| `cliphist`                                  | clear clipboard history | Wayland    |
+| `libnotify`                                 | desktop notifications   | Wayland    |
+| `clip.exe`                                  | clipboard               | WSL2       |
+| A [Nerd Font](https://www.nerdfonts.com/)   | UI icons                | both       |
 
 ---
 
