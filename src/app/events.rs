@@ -50,7 +50,7 @@ impl App {
                 }
                 match result {
                     Ok(bw::LoginFlowResult::LoggedIn(load)) => {
-                        self.enter_vault(load.key, load.ts, load.items, load.folders);
+                        self.enter_vault(load.key, load.ts, load.items, load.folders, load.status);
                         self.set_status("\u{f09c} Logged in");
                     }
                     Ok(bw::LoginFlowResult::TwoFactorRequired) => {
@@ -81,7 +81,7 @@ impl App {
                 }
                 match result {
                     Ok(load) => {
-                        self.enter_vault(load.key, load.ts, load.items, load.folders);
+                        self.enter_vault(load.key, load.ts, load.items, load.folders, load.status);
                         self.set_status("\u{f09c} Vault unlocked");
                     }
                     Err(e) => {

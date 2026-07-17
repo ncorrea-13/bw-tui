@@ -25,7 +25,8 @@ pub fn login_and_load(
             let ts = save_session(&key)?;
             let items = list_items(&key)?;
             let folders = list_folders(&key).unwrap_or_default();
-            Ok(LoginFlowResult::LoggedIn(VaultLoad { key, ts, items, folders }))
+            let status = status().ok();
+            Ok(LoginFlowResult::LoggedIn(VaultLoad { key, ts, items, folders, status }))
         }
     }
 }
@@ -35,7 +36,8 @@ pub fn unlock_and_load(password: &str) -> Result<VaultLoad> {
     let ts = save_session(&key)?;
     let items = list_items(&key)?;
     let folders = list_folders(&key).unwrap_or_default();
-    Ok(VaultLoad { key, ts, items, folders })
+    let status = status().ok();
+    Ok(VaultLoad { key, ts, items, folders, status })
 }
 
 pub fn refresh_items(session: &str) -> Result<ItemsLoad> {
@@ -56,7 +58,8 @@ pub fn compute_start() -> StartOutcome {
     if let Some((key, ts)) = load_cached_session() {
         if let Ok(items) = list_items(&key) {
             let folders = list_folders(&key).unwrap_or_default();
-            return StartOutcome::Vault(VaultLoad { key, ts, items, folders });
+            let status = status().ok();
+            return StartOutcome::Vault(VaultLoad { key, ts, items, folders, status });
         }
         clear_cached_session();
     }

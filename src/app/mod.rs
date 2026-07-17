@@ -203,7 +203,7 @@ impl App {
     fn apply_start_outcome(&mut self, outcome: bw::StartOutcome) {
         match outcome {
             bw::StartOutcome::Vault(load) => {
-                self.enter_vault(load.key, load.ts, load.items, load.folders);
+                self.enter_vault(load.key, load.ts, load.items, load.folders, load.status);
             }
             bw::StartOutcome::NeedsServerConfig(status) => {
                 self.session = None;
@@ -276,7 +276,14 @@ impl App {
         config::get().session_max_age_secs.saturating_sub(self.session_age())
     }
 
-    fn enter_vault(&mut self, key: String, ts: u64, items: Vec<Item>, folders: Vec<Folder>) {
+    fn enter_vault(
+        &mut self,
+        key: String,
+        ts: u64,
+        items: Vec<Item>,
+        folders: Vec<Folder>,
+        status: Option<Status>,
+    ) {
         self.folders = folders;
         self.session = Some(key);
         self.session_started = ts;
@@ -286,6 +293,9 @@ impl App {
         self.reveal = None;
         self.reveal_cvv = None;
         self.detail_open = false;
+        if status.is_some() {
+            self.server_status = status;
+        }
         self.refilter();
         self.screen = Screen::Main;
         self.tab = Tab::Vault;
