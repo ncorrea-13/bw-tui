@@ -268,6 +268,7 @@ impl App {
             },
             Tab::Generator => match key.code {
                 KeyCode::Esc => self.should_quit = true,
+                KeyCode::Char('q') => self.should_quit = true,
                 KeyCode::Enter => self.generate_password(),
                 KeyCode::Char('c') => self.copy_generated(),
                 code => self.apply_generator_option_key(code),
@@ -282,6 +283,7 @@ impl App {
                 }
                 match key.code {
                     KeyCode::Esc => self.should_quit = true,
+                    KeyCode::Char('q') => self.should_quit = true,
                     KeyCode::Char('s') => self.sync_now(),
                     KeyCode::Char('l') => self.lock_now(),
                     KeyCode::Char('o') => self.confirm_logout = true,
