@@ -12,9 +12,9 @@ use app::App;
 use crossterm::{
     event::{self, Event},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::{Terminal, backend::CrosstermBackend};
 use std::io::stdout;
 use std::time::Duration;
 
@@ -45,9 +45,10 @@ fn run(terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>) -> Result<()>
 
         if event::poll(TICK)?
             && let Event::Key(key) = event::read()?
-                && key.kind == event::KeyEventKind::Press {
-                    app.handle_key(key);
-                }
+            && key.kind == event::KeyEventKind::Press
+        {
+            app.handle_key(key);
+        }
         app.on_tick();
 
         if app.should_quit {

@@ -29,6 +29,7 @@ Examples:
   python3 scripts/smoke_test.py --wait 10 \\
       --key 5:not-the-real-password --key 0.5:\\r -- ./target/release/bw-tui
 """
+
 import argparse
 import fcntl
 import os
@@ -52,7 +53,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("--wait", type=float, default=6.0, help="total seconds to capture output for (default: 6)")
+    parser.add_argument(
+        "--wait",
+        type=float,
+        default=6.0,
+        help="total seconds to capture output for (default: 6)",
+    )
     parser.add_argument("--rows", type=int, default=30)
     parser.add_argument("--cols", type=int, default=100)
     parser.add_argument(
@@ -63,7 +69,9 @@ def main() -> int:
         help="after DELAY seconds, send TEXT as keystrokes (repeatable)",
     )
     parser.add_argument(
-        "binary", nargs=argparse.REMAINDER, help="binary and args to run, e.g. -- ./target/release/bw-tui"
+        "binary",
+        nargs=argparse.REMAINDER,
+        help="binary and args to run, e.g. -- ./target/release/bw-tui",
     )
     args = parser.parse_args()
 
@@ -72,9 +80,13 @@ def main() -> int:
         parser.error("no binary given, e.g.: smoke_test.py -- ./target/release/bw-tui")
 
     master, slave = pty.openpty()
-    fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", args.rows, args.cols, 0, 0))
+    fcntl.ioctl(
+        slave, termios.TIOCSWINSZ, struct.pack("HHHH", args.rows, args.cols, 0, 0)
+    )
 
-    proc = subprocess.Popen(cmd, stdin=slave, stdout=slave, stderr=slave, close_fds=True)
+    proc = subprocess.Popen(
+        cmd, stdin=slave, stdout=slave, stderr=slave, close_fds=True
+    )
     os.close(slave)
 
     data = b""
@@ -96,7 +108,12 @@ def main() -> int:
     steps = []
     for raw in args.key:
         delay_str, _, payload = raw.partition(":")
-        steps.append((float(delay_str), payload.encode().replace(b"\\r", b"\r").replace(b"\\x1b", b"\x1b")))
+        steps.append(
+            (
+                float(delay_str),
+                payload.encode().replace(b"\\r", b"\r").replace(b"\\x1b", b"\x1b"),
+            )
+        )
 
     remaining = args.wait
     for delay, payload in steps:

@@ -1,11 +1,11 @@
-use super::{centered, ACCENT, BG, ERROR, MUTED, TEXT};
+use super::{ACCENT, BG, ERROR, MUTED, TEXT, centered};
 use crate::app::{ItemForm, ItemFormField, ItemFormMode, ItemKind};
 use ratatui::{
+    Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::Span,
     widgets::{Block, Borders, Clear, Paragraph, Wrap},
-    Frame,
 };
 
 pub(super) fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rect) {
@@ -46,7 +46,10 @@ pub(super) fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rec
         .borders(Borders::ALL)
         .border_style(Style::default().fg(ACCENT))
         .style(Style::default().bg(BG))
-        .title(Span::styled(title, Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)));
+        .title(Span::styled(
+            title,
+            Style::default().fg(ACCENT).add_modifier(Modifier::BOLD),
+        ));
     let inner = block.inner(rect);
     frame.render_widget(block, rect);
 
@@ -57,7 +60,10 @@ pub(super) fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rec
     if ctrl_hint_lines > 0 {
         constraints.push(Constraint::Length(ctrl_hint_lines));
     }
-    let rows = Layout::default().direction(Direction::Vertical).constraints(constraints).split(inner);
+    let rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(constraints)
+        .split(inner);
 
     for (i, &field) in visible_fields.iter().enumerate() {
         let style = if form.focus == field {
@@ -73,7 +79,11 @@ pub(super) fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rec
             };
             format!("{}: {shown}", field.label())
         } else if field == ItemFormField::Number {
-            format!("{}: {}", field.label(), group_digits_by_four(form.field_value(field)))
+            format!(
+                "{}: {}",
+                field.label(),
+                group_digits_by_four(form.field_value(field))
+            )
         } else {
             format!("{}: {}", field.label(), form.field_value(field))
         };
@@ -82,17 +92,24 @@ pub(super) fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rec
 
     let error_row = visible_fields.len();
     if let Some(err) = &form.error {
-        frame.render_widget(Paragraph::new(format!("\u{f071} {err}")).style(Style::default().fg(ERROR)), rows[error_row]);
+        frame.render_widget(
+            Paragraph::new(format!("\u{f071} {err}")).style(Style::default().fg(ERROR)),
+            rows[error_row],
+        );
     }
 
     let plain_hint_row = error_row + 2;
     frame.render_widget(
-        Paragraph::new(plain_hint).style(Style::default().fg(MUTED)).wrap(Wrap { trim: false }),
+        Paragraph::new(plain_hint)
+            .style(Style::default().fg(MUTED))
+            .wrap(Wrap { trim: false }),
         rows[plain_hint_row],
     );
     if ctrl_hint_lines > 0 {
         frame.render_widget(
-            Paragraph::new(ctrl_hint).style(Style::default().fg(MUTED)).wrap(Wrap { trim: false }),
+            Paragraph::new(ctrl_hint)
+                .style(Style::default().fg(MUTED))
+                .wrap(Wrap { trim: false }),
             rows[plain_hint_row + 1],
         );
     }

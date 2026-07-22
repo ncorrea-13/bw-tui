@@ -26,7 +26,13 @@ pub fn login_and_load(
             let items = list_items(&key)?;
             let folders = list_folders(&key).unwrap_or_default();
             let status = status().ok();
-            Ok(LoginFlowResult::LoggedIn(VaultLoad { key, ts, items, folders, status }))
+            Ok(LoginFlowResult::LoggedIn(VaultLoad {
+                key,
+                ts,
+                items,
+                folders,
+                status,
+            }))
         }
     }
 }
@@ -37,7 +43,13 @@ pub fn unlock_and_load(password: &str) -> Result<VaultLoad> {
     let items = list_items(&key)?;
     let folders = list_folders(&key).unwrap_or_default();
     let status = status().ok();
-    Ok(VaultLoad { key, ts, items, folders, status })
+    Ok(VaultLoad {
+        key,
+        ts,
+        items,
+        folders,
+        status,
+    })
 }
 
 pub fn refresh_items(session: &str) -> Result<ItemsLoad> {
@@ -51,7 +63,11 @@ pub fn sync_and_refresh(session: &str) -> Result<SyncLoad> {
     let status = status().ok();
     let items = list_items(session)?;
     let folders = list_folders(session).unwrap_or_default();
-    Ok(SyncLoad { status, items, folders })
+    Ok(SyncLoad {
+        status,
+        items,
+        folders,
+    })
 }
 
 pub fn compute_start() -> StartOutcome {
@@ -59,7 +75,13 @@ pub fn compute_start() -> StartOutcome {
         if let Ok(items) = list_items(&key) {
             let folders = list_folders(&key).unwrap_or_default();
             let status = status().ok();
-            return StartOutcome::Vault(VaultLoad { key, ts, items, folders, status });
+            return StartOutcome::Vault(VaultLoad {
+                key,
+                ts,
+                items,
+                folders,
+                status,
+            });
         }
         clear_cached_session();
     }

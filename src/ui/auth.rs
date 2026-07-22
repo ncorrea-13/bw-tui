@@ -1,10 +1,10 @@
-use super::{boxed, ERROR, MUTED, TEXT, WARN};
+use super::{ERROR, MUTED, TEXT, WARN, boxed};
 use crate::app::{App, LoginField};
 use ratatui::{
+    Frame,
     layout::{Constraint, Direction, Layout},
     style::{Modifier, Style},
     widgets::Paragraph,
-    Frame,
 };
 
 pub(super) fn draw_loading(frame: &mut Frame, app: &App) {
@@ -15,11 +15,22 @@ pub(super) fn draw_loading(frame: &mut Frame, app: &App) {
     );
 }
 
-pub(super) fn draw_server_config(frame: &mut Frame, url: &str, error: Option<&str>, busy: bool, spinner: &str) {
+pub(super) fn draw_server_config(
+    frame: &mut Frame,
+    url: &str,
+    error: Option<&str>,
+    busy: bool,
+    spinner: &str,
+) {
     let inner = boxed(frame, "bw-tui — server", 64, 9);
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(1), Constraint::Length(1), Constraint::Length(1), Constraint::Min(1)])
+        .constraints([
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Min(1),
+        ])
         .split(inner);
 
     frame.render_widget(
@@ -62,14 +73,29 @@ pub(super) fn draw_login(
     if awaiting_2fa {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Length(1), Constraint::Length(1), Constraint::Length(1), Constraint::Length(1), Constraint::Min(1)])
+            .constraints([
+                Constraint::Length(1),
+                Constraint::Length(1),
+                Constraint::Length(1),
+                Constraint::Length(1),
+                Constraint::Min(1),
+            ])
             .split(inner);
-        frame.render_widget(Paragraph::new(format!("Method: {} (Tab to switch)", method.label())), chunks[0]);
+        frame.render_widget(
+            Paragraph::new(format!("Method: {} (Tab to switch)", method.label())),
+            chunks[0],
+        );
         frame.render_widget(Paragraph::new(format!("Code: {code}")), chunks[1]);
         if busy {
-            frame.render_widget(Paragraph::new(format!("{spinner} Verifying...")).style(Style::default().fg(WARN)), chunks[2]);
+            frame.render_widget(
+                Paragraph::new(format!("{spinner} Verifying...")).style(Style::default().fg(WARN)),
+                chunks[2],
+            );
         } else if let Some(err) = error {
-            frame.render_widget(Paragraph::new(format!("\u{f071} {err}")).style(Style::default().fg(ERROR)), chunks[2]);
+            frame.render_widget(
+                Paragraph::new(format!("\u{f071} {err}")).style(Style::default().fg(ERROR)),
+                chunks[2],
+            );
         }
         frame.render_widget(
             Paragraph::new("Enter: verify   Esc: quit").style(Style::default().fg(MUTED)),
@@ -100,14 +126,26 @@ pub(super) fn draw_login(
         Style::default().fg(MUTED)
     };
 
-    frame.render_widget(Paragraph::new(format!("Email: {email}")).style(email_style), chunks[0]);
+    frame.render_widget(
+        Paragraph::new(format!("Email: {email}")).style(email_style),
+        chunks[0],
+    );
     let masked = "*".repeat(password.chars().count());
-    frame.render_widget(Paragraph::new(format!("Password: {masked}")).style(pass_style), chunks[1]);
+    frame.render_widget(
+        Paragraph::new(format!("Password: {masked}")).style(pass_style),
+        chunks[1],
+    );
 
     if busy {
-        frame.render_widget(Paragraph::new(format!("{spinner} Logging in...")).style(Style::default().fg(WARN)), chunks[2]);
+        frame.render_widget(
+            Paragraph::new(format!("{spinner} Logging in...")).style(Style::default().fg(WARN)),
+            chunks[2],
+        );
     } else if let Some(err) = error {
-        frame.render_widget(Paragraph::new(format!("\u{f071} {err}")).style(Style::default().fg(ERROR)), chunks[2]);
+        frame.render_widget(
+            Paragraph::new(format!("\u{f071} {err}")).style(Style::default().fg(ERROR)),
+            chunks[2],
+        );
     }
 
     frame.render_widget(
@@ -129,7 +167,13 @@ pub(super) fn draw_unlock(
     let inner = boxed(frame, "bw-tui", 60, 9);
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(1), Constraint::Length(1), Constraint::Length(1), Constraint::Length(1), Constraint::Min(1)])
+        .constraints([
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Min(1),
+        ])
         .split(inner);
 
     let prompt = relock
@@ -141,13 +185,26 @@ pub(super) fn draw_unlock(
     frame.render_widget(Paragraph::new(prompt), chunks[0]);
 
     let masked = "*".repeat(password.chars().count());
-    let field_style = if busy { Style::default().fg(MUTED) } else { Style::default().fg(TEXT) };
-    frame.render_widget(Paragraph::new(format!("> {masked}")).style(field_style), chunks[1]);
+    let field_style = if busy {
+        Style::default().fg(MUTED)
+    } else {
+        Style::default().fg(TEXT)
+    };
+    frame.render_widget(
+        Paragraph::new(format!("> {masked}")).style(field_style),
+        chunks[1],
+    );
 
     if busy {
-        frame.render_widget(Paragraph::new(format!("{spinner} Unlocking...")).style(Style::default().fg(WARN)), chunks[2]);
+        frame.render_widget(
+            Paragraph::new(format!("{spinner} Unlocking...")).style(Style::default().fg(WARN)),
+            chunks[2],
+        );
     } else if let Some(err) = error {
-        frame.render_widget(Paragraph::new(format!("\u{f071} {err}")).style(Style::default().fg(ERROR)), chunks[2]);
+        frame.render_widget(
+            Paragraph::new(format!("\u{f071} {err}")).style(Style::default().fg(ERROR)),
+            chunks[2],
+        );
     }
 
     frame.render_widget(

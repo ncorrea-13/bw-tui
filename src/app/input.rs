@@ -156,7 +156,10 @@ impl App {
                         }
                         return;
                     }
-                    let ctrl_char = |c| key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char(c);
+                    let ctrl_char = |c| {
+                        key.modifiers.contains(KeyModifiers::CONTROL)
+                            && key.code == KeyCode::Char(c)
+                    };
                     if ctrl_char('g') {
                         self.open_item_form_password_picker();
                         return;

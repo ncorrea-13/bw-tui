@@ -1,16 +1,17 @@
-use super::{centered, ACCENT, ACCENT_DIM, BG, MUTED, TEXT, WARN};
+use super::{ACCENT, ACCENT_DIM, BG, MUTED, TEXT, WARN, centered};
 use crate::app::{App, VaultMode};
 use crate::bw::Item;
 use ratatui::{
+    Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
-    Frame,
 };
 
 pub(super) fn draw_vault_tab(frame: &mut Frame, app: &App, area: Rect) {
-    let folder_lines = super::wrapped_line_count(folder_bar_char_count(app), area.width).clamp(1, 4);
+    let folder_lines =
+        super::wrapped_line_count(folder_bar_char_count(app), area.width).clamp(1, 4);
     let rows = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(folder_lines + 2), Constraint::Min(3)])
@@ -29,9 +30,10 @@ pub(super) fn draw_vault_tab(frame: &mut Frame, app: &App, area: Rect) {
     if let Some(form) = &app.item_form {
         super::item_form::draw_item_form_popup(frame, form, content_area);
     } else if app.detail_open
-        && let Some(item) = app.selected_item() {
-            draw_detail_popup(frame, app, item, content_area);
-        }
+        && let Some(item) = app.selected_item()
+    {
+        draw_detail_popup(frame, app, item, content_area);
+    }
 }
 
 fn draw_folder_bar(frame: &mut Frame, app: &App, area: Rect) {
@@ -48,13 +50,19 @@ fn draw_folder_bar(frame: &mut Frame, app: &App, area: Rect) {
             spans.push(Span::raw("  "));
         }
         let style = if i == app.folder_index {
-            Style::default().bg(ACCENT).fg(BG).add_modifier(Modifier::BOLD)
+            Style::default()
+                .bg(ACCENT)
+                .fg(BG)
+                .add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(MUTED)
         };
         spans.push(Span::styled(format!(" {} ", app.folder_label(i)), style));
     }
-    frame.render_widget(Paragraph::new(Line::from(spans)).wrap(Wrap { trim: false }), inner);
+    frame.render_widget(
+        Paragraph::new(Line::from(spans)).wrap(Wrap { trim: false }),
+        inner,
+    );
 }
 
 fn folder_bar_char_count(app: &App) -> usize {
@@ -72,12 +80,20 @@ fn draw_search_bar(frame: &mut Frame, app: &App, area: Rect) {
         .split(area);
 
     let count = format!("Items  {}/{}", app.filtered.len(), app.items.len());
-    frame.render_widget(Paragraph::new(count).style(Style::default().fg(MUTED).add_modifier(Modifier::BOLD)), rows[0]);
+    frame.render_widget(
+        Paragraph::new(count).style(Style::default().fg(MUTED).add_modifier(Modifier::BOLD)),
+        rows[0],
+    );
 
     let (text, style) = match app.vault_mode {
         VaultMode::Search => (format!("/{}", app.query), Style::default().fg(ACCENT)),
-        VaultMode::Normal if app.query.is_empty() => ("press / to search".to_string(), Style::default().fg(MUTED)),
-        VaultMode::Normal => (format!("/{}  (Esc to clear)", app.query), Style::default().fg(TEXT)),
+        VaultMode::Normal if app.query.is_empty() => {
+            ("press / to search".to_string(), Style::default().fg(MUTED))
+        }
+        VaultMode::Normal => (
+            format!("/{}  (Esc to clear)", app.query),
+            Style::default().fg(TEXT),
+        ),
     };
     frame.render_widget(Paragraph::new(text).style(style), rows[1]);
 }
@@ -91,7 +107,10 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect) {
             let mut spans = vec![
                 Span::styled(item.type_icon(), Style::default().fg(MUTED)),
                 Span::raw(" "),
-                Span::styled(item.name.clone(), Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    item.name.clone(),
+                    Style::default().add_modifier(Modifier::BOLD),
+                ),
             ];
             if let Some(user) = item.username() {
                 spans.push(Span::raw("  "));
@@ -102,7 +121,12 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect) {
         .collect();
 
     let list = List::new(items)
-        .highlight_style(Style::default().bg(ACCENT).fg(BG).add_modifier(Modifier::BOLD))
+        .highlight_style(
+            Style::default()
+                .bg(ACCENT)
+                .fg(BG)
+                .add_modifier(Modifier::BOLD),
+        )
         .highlight_symbol("\u{f054} ");
 
     let mut state = ListState::default();
@@ -124,7 +148,10 @@ fn draw_detail_popup(frame: &mut Frame, app: &App, item: &Item, area: Rect) {
         .borders(Borders::ALL)
         .border_style(Style::default().fg(ACCENT))
         .style(Style::default().bg(BG))
-        .title(Span::styled(format!(" {} ", item.name), Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)));
+        .title(Span::styled(
+            format!(" {} ", item.name),
+            Style::default().fg(ACCENT).add_modifier(Modifier::BOLD),
+        ));
     let inner = block.inner(rect);
     frame.render_widget(block, rect);
 
@@ -133,11 +160,21 @@ fn draw_detail_popup(frame: &mut Frame, app: &App, item: &Item, area: Rect) {
         .constraints([Constraint::Min(1), Constraint::Length(1)])
         .split(inner);
     frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), rows[0]);
-    frame.render_widget(Paragraph::new(detail_footer(item)).style(Style::default().fg(MUTED)), rows[1]);
+    frame.render_widget(
+        Paragraph::new(detail_footer(item)).style(Style::default().fg(MUTED)),
+        rows[1],
+    );
 }
 
 fn mask_card_number(number: &str) -> String {
-    let last4: String = number.chars().rev().take(4).collect::<Vec<_>>().into_iter().rev().collect();
+    let last4: String = number
+        .chars()
+        .rev()
+        .take(4)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
     if last4.is_empty() {
         "•••• •••• •••• ••••".to_string()
     } else {
@@ -147,7 +184,12 @@ fn mask_card_number(number: &str) -> String {
 
 fn detail_footer(item: &Item) -> String {
     let mut parts: Vec<&str> = match item.item_type {
-        1 => vec!["Enter: copy password", "u: username", "t: TOTP", "r: reveal"],
+        1 => vec![
+            "Enter: copy password",
+            "u: username",
+            "t: TOTP",
+            "r: reveal",
+        ],
         3 => vec!["Enter: copy number", "r: reveal"],
         2 => vec!["Enter: copy notes"],
         _ => vec![],
@@ -173,13 +215,24 @@ fn item_detail_lines(app: &App, item: &Item) -> Vec<Line<'static>> {
         3 => {
             let card = item.card.as_ref();
             if let Some(holder) = card.and_then(|c| c.cardholder_name.as_deref()) {
-                lines.push(Line::from(vec![Span::styled("Cardholder: ", Style::default().fg(MUTED)), Span::raw(holder.to_string())]));
+                lines.push(Line::from(vec![
+                    Span::styled("Cardholder: ", Style::default().fg(MUTED)),
+                    Span::raw(holder.to_string()),
+                ]));
             }
             if let Some(brand) = card.and_then(|c| c.brand.as_deref()) {
-                lines.push(Line::from(vec![Span::styled("Brand: ", Style::default().fg(MUTED)), Span::raw(brand.to_string())]));
+                lines.push(Line::from(vec![
+                    Span::styled("Brand: ", Style::default().fg(MUTED)),
+                    Span::raw(brand.to_string()),
+                ]));
             }
-            if let Some((m, y)) = card.and_then(|c| Some((c.exp_month.as_deref()?, c.exp_year.as_deref()?))) {
-                lines.push(Line::from(vec![Span::styled("Expires: ", Style::default().fg(MUTED)), Span::raw(format!("{m}/{y}"))]));
+            if let Some((m, y)) =
+                card.and_then(|c| Some((c.exp_month.as_deref()?, c.exp_year.as_deref()?)))
+            {
+                lines.push(Line::from(vec![
+                    Span::styled("Expires: ", Style::default().fg(MUTED)),
+                    Span::raw(format!("{m}/{y}")),
+                ]));
             }
             let revealed = app.reveal.as_ref().is_some_and(|(id, _)| id == &item.id);
             let number_line = match card.and_then(|c| c.number.as_deref()) {
@@ -203,7 +256,10 @@ fn item_detail_lines(app: &App, item: &Item) -> Vec<Line<'static>> {
         }
         4 => {
             if let Some(summary) = item.identity_summary() {
-                lines.push(Line::from(vec![Span::styled("Identity: ", Style::default().fg(MUTED)), Span::raw(summary)]));
+                lines.push(Line::from(vec![
+                    Span::styled("Identity: ", Style::default().fg(MUTED)),
+                    Span::raw(summary),
+                ]));
             }
         }
         1 => {
@@ -212,7 +268,10 @@ fn item_detail_lines(app: &App, item: &Item) -> Vec<Line<'static>> {
                 Span::raw(item.username().unwrap_or("-").to_string()),
             ]));
             if let Some(uri) = item.first_uri() {
-                lines.push(Line::from(vec![Span::styled("URL: ", Style::default().fg(MUTED)), Span::raw(uri.to_string())]));
+                lines.push(Line::from(vec![
+                    Span::styled("URL: ", Style::default().fg(MUTED)),
+                    Span::raw(uri.to_string()),
+                ]));
             }
             lines.push(Line::from(vec![
                 Span::styled("TOTP: ", Style::default().fg(MUTED)),
@@ -238,11 +297,12 @@ fn item_detail_lines(app: &App, item: &Item) -> Vec<Line<'static>> {
     }
 
     if let Some(notes) = &item.notes
-        && !notes.is_empty() {
-            lines.push(Line::raw(""));
-            lines.push(Line::styled("Notes:", Style::default().fg(MUTED)));
-            lines.push(Line::raw(notes.clone()));
-        }
+        && !notes.is_empty()
+    {
+        lines.push(Line::raw(""));
+        lines.push(Line::styled("Notes:", Style::default().fg(MUTED)));
+        lines.push(Line::raw(notes.clone()));
+    }
 
     lines
 }
