@@ -10,7 +10,7 @@ if [ ! -f "$config_file" ]; then
   cat >"$config_file" <<'EOF'
 {
   "bw_cmd": "bw",
-  "session_max_age_secs": 1200,
+  "session_max_age_secs": 1800,
   "clipboard_clear_secs": 9,
   "generator": {
     "length": 20,
@@ -24,7 +24,7 @@ EOF
 fi
 
 BW_CMD=$(jq -r '.bw_cmd // "bw"' "$config_file")
-max_age=$(jq -r '.session_max_age_secs // 1200' "$config_file")
+max_age=$(jq -r '.session_max_age_secs // 1800' "$config_file")
 clear_secs=$(jq -r '.clipboard_clear_secs // 9' "$config_file")
 
 cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/bw-tui"
