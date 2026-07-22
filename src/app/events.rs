@@ -4,13 +4,25 @@ use crate::clipboard;
 
 pub enum BwEvent {
     Started(bw::StartOutcome),
-    ServerConfigured { url: String, result: anyhow::Result<()> },
+    ServerConfigured {
+        url: String,
+        result: anyhow::Result<()>,
+    },
     LoggedIn(anyhow::Result<bw::LoginFlowResult>),
     Unlocked(anyhow::Result<bw::VaultLoad>),
     ItemsRefreshed(anyhow::Result<bw::ItemsLoad>),
-    PasswordCopied { item_name: String, result: anyhow::Result<String> },
-    TotpCopied { item_name: String, result: anyhow::Result<String> },
-    Revealed { item_id: String, result: anyhow::Result<String> },
+    PasswordCopied {
+        item_name: String,
+        result: anyhow::Result<String>,
+    },
+    TotpCopied {
+        item_name: String,
+        result: anyhow::Result<String>,
+    },
+    Revealed {
+        item_id: String,
+        result: anyhow::Result<String>,
+    },
     Generated(anyhow::Result<String>),
     Synced(anyhow::Result<bw::SyncLoad>),
     LoggedOut(anyhow::Result<bw::StartOutcome>),
@@ -50,11 +62,19 @@ impl App {
                 }
                 match result {
                     Ok(bw::LoginFlowResult::LoggedIn(load)) => {
-                        self.enter_vault(load.key, load.ts, load.items, load.folders);
+                        self.enter_vault(load.key, load.ts, load.items, load.folders, load.status);
                         self.set_status("\u{f09c} Logged in");
                     }
                     Ok(bw::LoginFlowResult::TwoFactorRequired) => {
-                        if let Screen::Login { focus, awaiting_2fa, code, error, busy, .. } = &mut self.screen {
+                        if let Screen::Login {
+                            focus,
+                            awaiting_2fa,
+                            code,
+                            error,
+                            busy,
+                            ..
+                        } = &mut self.screen
+                        {
                             *focus = LoginField::Password;
                             *awaiting_2fa = true;
                             code.clear();
@@ -63,7 +83,17 @@ impl App {
                         }
                     }
                     Err(e) => {
-                        if let Screen::Login { password, focus, awaiting_2fa, code, method, error, busy, .. } = &mut self.screen {
+                        if let Screen::Login {
+                            password,
+                            focus,
+                            awaiting_2fa,
+                            code,
+                            method,
+                            error,
+                            busy,
+                            ..
+                        } = &mut self.screen
+                        {
                             password.clear();
                             *focus = LoginField::Password;
                             *awaiting_2fa = false;
@@ -81,11 +111,17 @@ impl App {
                 }
                 match result {
                     Ok(load) => {
-                        self.enter_vault(load.key, load.ts, load.items, load.folders);
+                        self.enter_vault(load.key, load.ts, load.items, load.folders, load.status);
                         self.set_status("\u{f09c} Vault unlocked");
                     }
                     Err(e) => {
-                        if let Screen::Unlock { password, error, busy, .. } = &mut self.screen {
+                        if let Screen::Unlock {
+                            password,
+                            error,
+                            busy,
+                            ..
+                        } = &mut self.screen
+                        {
                             password.clear();
                             *error = Some(e.to_string());
                             *busy = false;
@@ -118,7 +154,9 @@ impl App {
                         clipboard::notify(&format!("✅ Password copied: {item_name}"));
                         let secs = crate::config::get().clipboard_clear_secs;
                         let note = clipboard::autoclear_note(secs);
-                        self.set_status(format!("\u{f00c} Password for '{item_name}' copied{note}"));
+                        self.set_status(format!(
+                            "\u{f00c} Password for '{item_name}' copied{note}"
+                        ));
                         clipboard::spawn_autoclear(pw, "password");
                     }
                     Ok(_) => self.set_status("\u{f071} This item has no password"),
@@ -136,7 +174,9 @@ impl App {
                         }
                         let secs = crate::config::get().clipboard_clear_secs;
                         let note = clipboard::autoclear_note(secs);
-                        self.set_status(format!("\u{f00c} TOTP code for '{item_name}' copied{note}"));
+                        self.set_status(format!(
+                            "\u{f00c} TOTP code for '{item_name}' copied{note}"
+                        ));
                         clipboard::spawn_autoclear(code, "TOTP");
                     }
                     Ok(_) => self.set_status("\u{f071} Could not generate the TOTP code"),
@@ -194,7 +234,11 @@ impl App {
                         let created_id = item.id.clone();
                         self.items.push(item);
                         self.refilter();
-                        if let Some(pos) = self.filtered.iter().position(|&i| self.items[i].id == created_id) {
+                        if let Some(pos) = self
+                            .filtered
+                            .iter()
+                            .position(|&i| self.items[i].id == created_id)
+                        {
                             self.selected = pos;
                         }
                         self.item_form = None;
@@ -217,7 +261,11 @@ impl App {
                             self.items[pos] = item;
                         }
                         self.refilter();
-                        if let Some(pos) = self.filtered.iter().position(|&i| self.items[i].id == edited_id) {
+                        if let Some(pos) = self
+                            .filtered
+                            .iter()
+                            .position(|&i| self.items[i].id == edited_id)
+                        {
                             self.selected = pos;
                         }
                         self.item_form = None;

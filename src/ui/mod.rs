@@ -6,11 +6,11 @@ mod vault;
 
 use crate::app::{App, Screen, Tab, VaultMode};
 use ratatui::{
+    Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Paragraph, Wrap},
-    Frame,
 };
 
 const BG: Color = Color::Rgb(0x12, 0x0d, 0x1e);
@@ -23,7 +23,10 @@ const ERROR: Color = Color::Rgb(0xe3, 0x6f, 0x78);
 const OK: Color = Color::Rgb(0x81, 0xcb, 0x9d);
 
 pub fn draw(frame: &mut Frame, app: &App) {
-    frame.render_widget(Block::default().style(Style::default().bg(BG).fg(TEXT)), frame.area());
+    frame.render_widget(
+        Block::default().style(Style::default().bg(BG).fg(TEXT)),
+        frame.area(),
+    );
     match &app.screen {
         Screen::ServerConfig { url, error, busy } => {
             auth::draw_server_config(frame, url, error.as_deref(), *busy, app.spinner())
@@ -84,7 +87,11 @@ fn panel(frame: &mut Frame, area: Rect, title: &str, width: u16, height: u16) ->
     let area = centered(area, width, height);
     let rows = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(1), Constraint::Length(1), Constraint::Min(1)])
+        .constraints([
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Min(1),
+        ])
         .split(area);
     frame.render_widget(
         Paragraph::new(title).style(Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)),
@@ -115,7 +122,12 @@ fn draw_main(frame: &mut Frame, app: &App) {
 
     let root = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(1), Constraint::Min(5), Constraint::Length(1), Constraint::Length(help_lines)])
+        .constraints([
+            Constraint::Length(1),
+            Constraint::Min(5),
+            Constraint::Length(1),
+            Constraint::Length(help_lines),
+        ])
         .split(area);
 
     draw_tab_bar(frame, app, root[0]);
@@ -131,14 +143,20 @@ fn draw_main(frame: &mut Frame, app: &App) {
 }
 
 fn draw_tab_bar(frame: &mut Frame, app: &App, area: Rect) {
-    let tabs = [("Vault", Tab::Vault), ("Generator", Tab::Generator), ("Account", Tab::Account)];
+    let tabs = [
+        ("Vault", Tab::Vault),
+        ("Generator", Tab::Generator),
+        ("Account", Tab::Account),
+    ];
     let mut spans = vec![];
     for (i, (label, tab)) in tabs.iter().enumerate() {
         if i > 0 {
             spans.push(Span::styled("    ", Style::default().fg(MUTED)));
         }
         let style = if *tab == app.tab {
-            Style::default().fg(ACCENT).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
+            Style::default()
+                .fg(ACCENT)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
         } else {
             Style::default().fg(MUTED)
         };
@@ -155,34 +173,54 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
 
     let (message, style) = if app.busy {
         let label = app.busy_label.as_deref().unwrap_or("Working...");
-        (format!("{} {label}", app.spinner()), Style::default().fg(WARN))
+        (
+            format!("{} {label}", app.spinner()),
+            Style::default().fg(WARN),
+        )
     } else if let Some(status) = &app.status {
         (status.text.clone(), Style::default().fg(ACCENT))
     } else {
         (String::new(), Style::default().fg(ACCENT))
     };
 
-    let text = if message.is_empty() { session_txt } else { format!("{message}   |   {session_txt}") };
+    let text = if message.is_empty() {
+        session_txt
+    } else {
+        format!("{message}   |   {session_txt}")
+    };
 
-    frame.render_widget(Paragraph::new(text).style(style).alignment(Alignment::Left), area);
+    frame.render_widget(
+        Paragraph::new(text).style(style).alignment(Alignment::Left),
+        area,
+    );
 }
 
 fn help_text(app: &App) -> &'static str {
     match app.tab {
-        Tab::Vault if app.item_form.is_some() => "Tab: field  Enter: save  Ctrl+G: random password  Esc: cancel",
-        Tab::Vault if app.detail_open => "Enter: copy password  u: username  t: TOTP  r: reveal  Esc: close",
-        Tab::Vault if app.vault_mode == VaultMode::Search => "type to filter  Enter: confirm  Esc: cancel",
+        Tab::Vault if app.item_form.is_some() => {
+            "Tab: field  Enter: save  Ctrl+G: random password  Esc: cancel"
+        }
+        Tab::Vault if app.detail_open => {
+            "Enter: copy password  u: username  t: TOTP  r: reveal  Esc: close"
+        }
+        Tab::Vault if app.vault_mode == VaultMode::Search => {
+            "type to filter  Enter: confirm  Esc: cancel"
+        }
         Tab::Vault => {
             "j/k: move  gg/G: top/bottom  h/l: folder  /: search  Enter: view details  n: new item  R: refresh  Tab: switch view  q: quit"
         }
-        Tab::Generator => "u/l/n/s: toggle  ↑/↓: length  Enter: generate  c: copy  Tab: switch view  Esc: quit",
+        Tab::Generator => {
+            "u/l/n/s: toggle  ↑/↓: length  Enter: generate  c: copy  Tab: switch view  Esc: quit"
+        }
         Tab::Account => "s: sync  l: lock  o: log out  Tab: switch view  Esc: quit",
     }
 }
 
 fn draw_help(frame: &mut Frame, app: &App, area: Rect) {
     frame.render_widget(
-        Paragraph::new(help_text(app)).style(Style::default().fg(MUTED)).wrap(Wrap { trim: false }),
+        Paragraph::new(help_text(app))
+            .style(Style::default().fg(MUTED))
+            .wrap(Wrap { trim: false }),
         area,
     );
 }

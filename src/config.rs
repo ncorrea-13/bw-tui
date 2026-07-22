@@ -16,7 +16,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             bw_cmd: "bw".to_string(),
-            session_max_age_secs: 1200,
+            session_max_age_secs: 1800,
             clipboard_clear_secs: 9,
             generator: GenerateOptions::default(),
         }
@@ -47,7 +47,10 @@ fn load_or_create() -> Config {
         Ok(text) => match serde_json::from_str(&text) {
             Ok(cfg) => cfg,
             Err(e) => {
-                eprintln!("\u{f071} could not parse {}: {e}, using defaults", path.display());
+                eprintln!(
+                    "\u{f071} could not parse {}: {e}, using defaults",
+                    path.display()
+                );
                 Config::default()
             }
         },

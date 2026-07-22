@@ -92,7 +92,7 @@ Both versions share the same config file: `~/.config/bw-tui/config.json` (or `$X
 ```json
 {
   "bw_cmd": "bw",
-  "session_max_age_secs": 1200,
+  "session_max_age_secs": 1800,
   "clipboard_clear_secs": 9,
   "generator": {
     "length": 20,

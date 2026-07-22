@@ -1,5 +1,5 @@
-use super::events::BwEvent;
 use super::App;
+use super::events::BwEvent;
 use crate::bw::{self, Item};
 
 #[derive(Clone, Copy, PartialEq)]
@@ -58,9 +58,12 @@ impl ItemKind {
 
     pub fn fields(self) -> &'static [ItemFormField] {
         match self {
-            ItemKind::Login => {
-                &[ItemFormField::Name, ItemFormField::Username, ItemFormField::Password, ItemFormField::Notes]
-            }
+            ItemKind::Login => &[
+                ItemFormField::Name,
+                ItemFormField::Username,
+                ItemFormField::Password,
+                ItemFormField::Notes,
+            ],
             ItemKind::Note => &[ItemFormField::Name, ItemFormField::Notes],
             ItemKind::Card => &[
                 ItemFormField::Name,
@@ -190,7 +193,9 @@ impl ItemForm {
         let card = item.card.as_ref();
         let identity = item.identity.as_ref();
         Self {
-            mode: ItemFormMode::Edit { id: item.id.clone() },
+            mode: ItemFormMode::Edit {
+                id: item.id.clone(),
+            },
             kind: ItemKind::from_item_type(item.item_type),
             focus: ItemFormField::Name,
             name: item.name.clone(),
@@ -198,14 +203,20 @@ impl ItemForm {
             password: String::new(),
             password_revealed: false,
             notes: item.notes.clone().unwrap_or_default(),
-            cardholder_name: card.and_then(|c| c.cardholder_name.clone()).unwrap_or_default(),
+            cardholder_name: card
+                .and_then(|c| c.cardholder_name.clone())
+                .unwrap_or_default(),
             brand: card.and_then(|c| c.brand.clone()).unwrap_or_default(),
             number: card.and_then(|c| c.number.clone()).unwrap_or_default(),
             exp_month: card.and_then(|c| c.exp_month.clone()).unwrap_or_default(),
             exp_year: card.and_then(|c| c.exp_year.clone()).unwrap_or_default(),
             code: card.and_then(|c| c.code.clone()).unwrap_or_default(),
-            first_name: identity.and_then(|i| i.first_name.clone()).unwrap_or_default(),
-            last_name: identity.and_then(|i| i.last_name.clone()).unwrap_or_default(),
+            first_name: identity
+                .and_then(|i| i.first_name.clone())
+                .unwrap_or_default(),
+            last_name: identity
+                .and_then(|i| i.last_name.clone())
+                .unwrap_or_default(),
             email: identity.and_then(|i| i.email.clone()).unwrap_or_default(),
             phone: identity.and_then(|i| i.phone.clone()).unwrap_or_default(),
             generator_open: false,
@@ -283,7 +294,11 @@ impl App {
         if !matches!(form.mode, ItemFormMode::Create) {
             return;
         }
-        form.kind = if delta > 0 { form.kind.next() } else { form.kind.prev() };
+        form.kind = if delta > 0 {
+            form.kind.next()
+        } else {
+            form.kind.prev()
+        };
         let fields = form.kind.fields();
         if !fields.contains(&form.focus) {
             form.focus = fields[0];
@@ -345,8 +360,10 @@ impl App {
         let kind = form.kind;
         let name = form.name.trim().to_string();
         let notes = opt(&form.notes);
-        let login = matches!(kind, ItemKind::Login)
-            .then(|| bw::NewLogin { username: opt(&form.username), password: opt(&form.password) });
+        let login = matches!(kind, ItemKind::Login).then(|| bw::NewLogin {
+            username: opt(&form.username),
+            password: opt(&form.password),
+        });
         let card = matches!(kind, ItemKind::Card).then(|| bw::NewCard {
             cardholder_name: opt(&form.cardholder_name),
             brand: opt(&form.brand),
@@ -380,12 +397,20 @@ impl App {
         match editing_id {
             Some(id) => {
                 self.busy_label = Some("Saving item…".to_string());
-                let patch = bw::ItemPatch { name, notes, folder_id: None, login, card, identity };
+                let patch = bw::ItemPatch {
+                    name,
+                    notes,
+                    folder_id: None,
+                    login,
+                    card,
+                    identity,
+                };
                 self.spawn(move || BwEvent::ItemEdited(bw::edit_item(&id, &patch, &session)));
             }
             None => {
                 self.busy_label = Some("Creating item…".to_string());
-                let secure_note = matches!(kind, ItemKind::Note).then_some(bw::SecureNoteData { note_type: 0 });
+                let secure_note =
+                    matches!(kind, ItemKind::Note).then_some(bw::SecureNoteData { note_type: 0 });
                 let new_item = bw::NewItem {
                     folder_id: None,
                     item_type: kind.item_type(),

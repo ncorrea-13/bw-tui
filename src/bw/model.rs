@@ -227,6 +227,7 @@ pub struct VaultLoad {
     pub ts: u64,
     pub items: Vec<Item>,
     pub folders: Vec<Folder>,
+    pub status: Option<Status>,
 }
 
 pub struct ItemsLoad {

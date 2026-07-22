@@ -5,12 +5,12 @@ mod item_form;
 mod tests;
 
 use crate::bw::{self, Folder, GenerateOptions, Item, Status};
-use crate::config;
 use crate::clipboard;
+use crate::config;
 use events::BwEvent;
-pub use item_form::{ItemForm, ItemFormField, ItemFormMode, ItemKind};
-use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::skim::SkimMatcherV2;
+pub use item_form::{ItemForm, ItemFormField, ItemFormMode, ItemKind};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -203,7 +203,7 @@ impl App {
     fn apply_start_outcome(&mut self, outcome: bw::StartOutcome) {
         match outcome {
             bw::StartOutcome::Vault(load) => {
-                self.enter_vault(load.key, load.ts, load.items, load.folders);
+                self.enter_vault(load.key, load.ts, load.items, load.folders, load.status);
             }
             bw::StartOutcome::NeedsServerConfig(status) => {
                 self.session = None;
@@ -256,10 +256,13 @@ impl App {
         self.tick_count = self.tick_count.wrapping_add(1);
         self.poll_bw_events();
         if let Some(s) = &self.status
-            && s.shown_at.elapsed() > Duration::from_secs(4) {
-                self.status = None;
-            }
-        if matches!(self.screen, Screen::Main) && self.session_age() > config::get().session_max_age_secs {
+            && s.shown_at.elapsed() > Duration::from_secs(4)
+        {
+            self.status = None;
+        }
+        if matches!(self.screen, Screen::Main)
+            && self.session_age() > config::get().session_max_age_secs
+        {
             self.relock("\u{f023} Session expired, enter your master password again:");
         }
     }
@@ -273,10 +276,19 @@ impl App {
     }
 
     pub fn session_remaining(&self) -> u64 {
-        config::get().session_max_age_secs.saturating_sub(self.session_age())
+        config::get()
+            .session_max_age_secs
+            .saturating_sub(self.session_age())
     }
 
-    fn enter_vault(&mut self, key: String, ts: u64, items: Vec<Item>, folders: Vec<Folder>) {
+    fn enter_vault(
+        &mut self,
+        key: String,
+        ts: u64,
+        items: Vec<Item>,
+        folders: Vec<Folder>,
+        status: Option<Status>,
+    ) {
         self.folders = folders;
         self.session = Some(key);
         self.session_started = ts;
@@ -286,13 +298,19 @@ impl App {
         self.reveal = None;
         self.reveal_cvv = None;
         self.detail_open = false;
+        if status.is_some() {
+            self.server_status = status;
+        }
         self.refilter();
         self.screen = Screen::Main;
         self.tab = Tab::Vault;
     }
 
     fn relock(&mut self, message: &str) {
-        let email = self.server_status.as_ref().and_then(|s| s.user_email.clone());
+        let email = self
+            .server_status
+            .as_ref()
+            .and_then(|s| s.user_email.clone());
         thread::spawn(bw::clear_cached_session);
         self.session = None;
         self.items.clear();
@@ -346,7 +364,15 @@ impl App {
     // ---- Login / unlock --------------------------------------------------
 
     fn try_login(&mut self) {
-        let Screen::Login { email, password, awaiting_2fa, code, method, busy, .. } = &mut self.screen
+        let Screen::Login {
+            email,
+            password,
+            awaiting_2fa,
+            code,
+            method,
+            busy,
+            ..
+        } = &mut self.screen
         else {
             return;
         };
@@ -417,14 +443,21 @@ impl App {
         let folder_id_filter: Option<Option<&str>> = match folder_index {
             0 => None,
             1 => Some(None),
-            i => self.folders.get(i - 2).map(|f| Some(f.id.as_deref().unwrap_or(""))),
+            i => self
+                .folders
+                .get(i - 2)
+                .map(|f| Some(f.id.as_deref().unwrap_or(""))),
         };
 
-        let candidates = self.items.iter().enumerate().filter(|(_, item)| match folder_id_filter {
-            None => true,
-            Some(None) => item.folder_id.is_none(),
-            Some(Some(id)) => item.folder_id.as_deref() == Some(id),
-        });
+        let candidates = self
+            .items
+            .iter()
+            .enumerate()
+            .filter(|(_, item)| match folder_id_filter {
+                None => true,
+                Some(None) => item.folder_id.is_none(),
+                Some(Some(id)) => item.folder_id.as_deref() == Some(id),
+            });
 
         if self.query.is_empty() {
             self.filtered = candidates.map(|(i, _)| i).collect();
@@ -485,7 +518,10 @@ impl App {
         self.busy_label = Some(format!("Copying password for '{}'…", item.name));
         self.spawn(move || {
             let result = bw::get_password(&item.id, &session);
-            BwEvent::PasswordCopied { item_name: item.name, result }
+            BwEvent::PasswordCopied {
+                item_name: item.name,
+                result,
+            }
         });
     }
 
@@ -573,7 +609,10 @@ impl App {
         self.busy_label = Some(format!("Fetching TOTP for '{}'…", item.name));
         self.spawn(move || {
             let result = bw::get_totp(&item.id, &session);
-            BwEvent::TotpCopied { item_name: item.name, result }
+            BwEvent::TotpCopied {
+                item_name: item.name,
+                result,
+            }
         });
     }
 
@@ -598,7 +637,10 @@ impl App {
                 self.busy_label = Some("Revealing password…".to_string());
                 self.spawn(move || {
                     let result = bw::get_password(&item.id, &session);
-                    BwEvent::Revealed { item_id: item.id, result }
+                    BwEvent::Revealed {
+                        item_id: item.id,
+                        result,
+                    }
                 });
             }
             3 => {
@@ -628,8 +670,12 @@ impl App {
     pub fn apply_generator_option_key(&mut self, code: crossterm::event::KeyCode) {
         use crossterm::event::KeyCode;
         match code {
-            KeyCode::Up => self.generator.opts.length = self.generator.opts.length.saturating_add(1).min(128),
-            KeyCode::Down => self.generator.opts.length = self.generator.opts.length.saturating_sub(1).max(5),
+            KeyCode::Up => {
+                self.generator.opts.length = self.generator.opts.length.saturating_add(1).min(128)
+            }
+            KeyCode::Down => {
+                self.generator.opts.length = self.generator.opts.length.saturating_sub(1).max(5)
+            }
             KeyCode::Char('u') => self.generator.opts.uppercase = !self.generator.opts.uppercase,
             KeyCode::Char('l') => self.generator.opts.lowercase = !self.generator.opts.lowercase,
             KeyCode::Char('n') => self.generator.opts.numbers = !self.generator.opts.numbers,
