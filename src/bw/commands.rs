@@ -1,7 +1,7 @@
 use super::model::*;
 use super::session::clear_cached_session;
-use anyhow::{bail, Context, Result};
-use base64::{engine::general_purpose::STANDARD, Engine as _};
+use anyhow::{Context, Result, bail};
+use base64::{Engine as _, engine::general_purpose::STANDARD};
 use std::io::Read;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
@@ -85,7 +85,9 @@ pub fn get_item(id: &str, session: &str) -> Result<serde_json::Value> {
 
 pub fn edit_item(id: &str, patch: &ItemPatch, session: &str) -> Result<Item> {
     let mut raw_item = get_item(id, session)?;
-    let item_fields = raw_item.as_object_mut().context("unexpected item shape from bw")?;
+    let item_fields = raw_item
+        .as_object_mut()
+        .context("unexpected item shape from bw")?;
 
     item_fields.insert("name".to_string(), serde_json::json!(patch.name));
     item_fields.insert("notes".to_string(), serde_json::json!(patch.notes));
@@ -112,7 +114,10 @@ pub fn edit_item(id: &str, patch: &ItemPatch, session: &str) -> Result<Item> {
             .as_object_mut()
             .context("unexpected card shape from bw")?;
         if let Some(cardholder_name) = &card_patch.cardholder_name {
-            card_fields.insert("cardholderName".to_string(), serde_json::json!(cardholder_name));
+            card_fields.insert(
+                "cardholderName".to_string(),
+                serde_json::json!(cardholder_name),
+            );
         }
         if let Some(brand) = &card_patch.brand {
             card_fields.insert("brand".to_string(), serde_json::json!(brand));
@@ -151,10 +156,18 @@ pub fn edit_item(id: &str, patch: &ItemPatch, session: &str) -> Result<Item> {
         }
     }
 
-    let edited_item_json = serde_json::to_string(&raw_item).context("could not encode the edited item")?;
+    let edited_item_json =
+        serde_json::to_string(&raw_item).context("could not encode the edited item")?;
     let edited_item_base64 = STANDARD.encode(edited_item_json);
     let out = bw_command()
-        .args(["edit", "item", id, &edited_item_base64, "--session", session])
+        .args([
+            "edit",
+            "item",
+            id,
+            &edited_item_base64,
+            "--session",
+            session,
+        ])
         .stdin(Stdio::null())
         .output()
         .context("could not run `bw edit item`")?;
@@ -227,16 +240,13 @@ pub fn config_server(url: &str) -> Result<()> {
     Ok(())
 }
 
-// `bw`'s master-password/two-step prompts open /dev/tty directly instead of
-// reading from stdin, so redirecting stdin to null doesn't stop them. Run
-// against a raw-mode ratatui screen (which already owns that same tty) and a
-// prompt we never intended to trigger just hangs forever with no way to
-// answer it. Bound the wait so a stuck prompt surfaces as "needs 2FA"
-// (first attempt, no code yet) or a clear timeout error (second attempt)
-// instead of freezing the UI.
 const LOGIN_TIMEOUT: Duration = Duration::from_secs(20);
 
-pub fn login(email: &str, password: &str, two_factor: Option<(&str, &str)>) -> Result<LoginOutcome> {
+pub fn login(
+    email: &str,
+    password: &str,
+    two_factor: Option<(&str, &str)>,
+) -> Result<LoginOutcome> {
     const ENV_VAR: &str = "BW_TUI_PASSWORD";
     let mut args = vec![
         "login".to_string(),
@@ -288,7 +298,10 @@ pub fn login(email: &str, password: &str, two_factor: Option<(&str, &str)>) -> R
 
     if !status.success() {
         let stderr_lower = stderr.to_lowercase();
-        if stderr_lower.contains("two-step") || stderr_lower.contains("two factor") || stderr_lower.contains("2fa") {
+        if stderr_lower.contains("two-step")
+            || stderr_lower.contains("two factor")
+            || stderr_lower.contains("2fa")
+        {
             return Ok(LoginOutcome::TwoFactorRequired);
         }
         bail!("bw login failed: {}", stderr.trim());
@@ -343,11 +356,20 @@ pub fn list_folders(session: &str) -> Result<Vec<Folder>> {
             String::from_utf8_lossy(&out.stderr).trim()
         );
     }
-    serde_json::from_slice(&out.stdout).context("could not parse bw's response")
+    let folders: Vec<Folder> =
+        serde_json::from_slice(&out.stdout).context("could not parse bw's response")?;
+    Ok(folders
+        .into_iter()
+        .filter(|f| !f.id.as_deref().unwrap_or("").is_empty())
+        .collect())
 }
 
 pub fn generate(opts: &GenerateOptions) -> Result<String> {
-    let mut args = vec!["generate".to_string(), "--length".to_string(), opts.length.max(5).to_string()];
+    let mut args = vec![
+        "generate".to_string(),
+        "--length".to_string(),
+        opts.length.max(5).to_string(),
+    ];
     if opts.uppercase {
         args.push("--uppercase".to_string());
     }
