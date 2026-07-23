@@ -23,6 +23,7 @@ fn session_time_file() -> PathBuf {
 }
 
 fn now_secs() -> u64 {
+    #[allow(clippy::unwrap_used, reason = "system clock is never before UNIX_EPOCH")]
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
