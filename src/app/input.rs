@@ -147,7 +147,11 @@ impl App {
                     _ => {}
                 },
                 VaultMode::Normal if self.item_form.is_some() => {
-                    if self.item_form.as_ref().unwrap().generator_open {
+                    let generator_open = match self.item_form.as_ref() {
+                        Some(form) => form.generator_open,
+                        None => return,
+                    };
+                    if generator_open {
                         match key.code {
                             KeyCode::Esc => self.close_item_form_password_picker(),
                             KeyCode::Char('g') => self.generate_password(),
@@ -183,7 +187,9 @@ impl App {
                         }
                         _ => {}
                     }
-                    let form = self.item_form.as_mut().unwrap();
+                    let Some(form) = self.item_form.as_mut() else {
+                        return;
+                    };
                     match key.code {
                         KeyCode::Tab => form.cycle_focus(1),
                         KeyCode::BackTab => form.cycle_focus(-1),
