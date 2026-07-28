@@ -112,6 +112,6 @@ Actively maintained, but built for my own use first. Issues and PRs are welcome 
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+GPLv3 - see [LICENSE](LICENSE) for details.
 
 _Mendoza, Argentina - Nicolás Correa ([ncorrea-13](https://github.com/ncorrea-13))_

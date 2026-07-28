@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Nicolás Correa
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 use super::{ERROR, MUTED, TEXT, WARN, boxed};
 use crate::app::{App, LoginField};
 use ratatui::{

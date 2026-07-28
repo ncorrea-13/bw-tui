@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Nicolás Correa
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 use super::model::*;
 use super::session::clear_cached_session;
 use anyhow::{Context, Result, bail};

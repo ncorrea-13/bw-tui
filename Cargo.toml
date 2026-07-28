@@ -2,7 +2,7 @@
 name = "bw-tui"
 version = "0.2.2"
 edition = "2024"
-license = "MIT"
+license = "GPL-3.0-or-later"
 
 [dependencies]
 ratatui = "0.30"

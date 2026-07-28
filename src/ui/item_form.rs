@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Nicolás Correa
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 use super::{ACCENT, BG, ERROR, MUTED, TEXT, centered};
 use crate::app::{ItemForm, ItemFormField, ItemFormMode, ItemKind};
 use ratatui::{

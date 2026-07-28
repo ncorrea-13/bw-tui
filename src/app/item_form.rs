@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Nicolás Correa
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 use super::App;
 use super::events::BwEvent;
 use crate::bw::{self, Item};
