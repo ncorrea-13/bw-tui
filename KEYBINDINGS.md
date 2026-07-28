@@ -1,10 +1,10 @@
-# Keybindings (Rust version)
+# Keybindings
 
-Full keyboard reference for the Rust TUI (`src/`). The bash script has no keybindings of its own. It hands off navigation to `fzf`, whose keys are `fzf`'s own (arrows/Ctrl-J/Ctrl-K to move, type to filter, Enter to select, Esc/Ctrl-C to cancel).
+Full keyboard reference for the Rust version.
 
-**Anywhere in the main screen**: `Tab` / `Shift+Tab` switch between the Vault, Generator and Account tabs. `Ctrl+C` quits from anywhere, including the login/unlock screens.
+`Tab` / `Shift+Tab` switch between the Vault, Generator and Account tabs. `Ctrl+C` and `q` quits from anywhere, including the login/unlock screens.
 
-## Vault tab (normal mode)
+## Vault tab
 
 | Key                | Action                     |
 | ------------------ | -------------------------- |
@@ -26,23 +26,23 @@ Shows everything about the selected item: for a login, that's username/URL/TOTP 
 | `Enter` | copy the item's "main" secret (password / card number / note) |
 | `u`     | copy username (logins)                                        |
 | `t`     | copy TOTP code (logins)                                       |
-| `r`     | reveal password or card number                                |
-| `n`     | copy notes, if the item has any                               |
+| `r`     | reveal secret                                                 |
+| `n`     | copy notes                                                    |
 | `e`     | edit item                                                     |
 | `Esc`   | close the popup                                               |
 
 ## Create / edit item form
 
-Opened with `n` from the vault list (new item) or `e` from the item detail popup (edit the selected login, note, card, or identity). Which fields show up depends on the item type; you can't change an existing item's type, only pick one while creating.
+Opened with `n` from the vault list, or `e` from the item detail popup. Which fields show up depends on the item type; you can't change an existing item's type, only pick one while creating.
 
-| Key                 | Action                                                    |
-| ------------------- | --------------------------------------------------------- |
-| `Tab` / `Shift+Tab` | move to the next / previous field                         |
-| `Ctrl+T`            | cycle item type (creating mode)                           |
-| `Ctrl+G`            | open the password generator (login only)                  |
-| `Ctrl+R`            | fetch and show the item's current password (editing mode) |
-| `Enter`             | save                                                      |
-| `Esc`               | closes the form                                           |
+| Key                 | Action                                     |
+| ------------------- | ------------------------------------------ |
+| `Tab` / `Shift+Tab` | move to the next / previous field          |
+| `Ctrl+T`            | cycle item type                            |
+| `Ctrl+G`            | open the password generator (login only)   |
+| `Ctrl+R`            | fetch and show the item's current password |
+| `Enter`             | save                                       |
+| `Esc`               | closes the form                            |
 
 Leaving the password field empty while editing keeps the item's existing password; it's never overwritten with a blank one.
 
