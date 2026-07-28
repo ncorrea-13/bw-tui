@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copyright (c) 2026 Nicolás Correa
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/bw-tui"
 config_file="$config_dir/config.json"

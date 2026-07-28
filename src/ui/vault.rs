@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Nicolás Correa
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 use super::{ACCENT, ACCENT_DIM, BG, MUTED, TEXT, WARN, centered};
 use crate::app::{App, VaultMode};
 use crate::bw::Item;
