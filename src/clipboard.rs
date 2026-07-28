@@ -48,6 +48,7 @@ pub fn copy(text: &str) -> Result<()> {
         .stdin(Stdio::piped())
         .spawn()
         .with_context(|| format!("could not run {program} ({hint})"))?;
+    #[allow(clippy::unwrap_used, reason = "stdin is guaranteed Some: Stdio::piped() was set above")]
     child
         .stdin
         .as_mut()

@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Nicolás Correa
 // SPDX-License-Identifier: MIT
 
+#![warn(clippy::unwrap_used)]
+
 mod app;
 mod bw;
 mod clipboard;

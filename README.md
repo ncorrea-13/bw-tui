@@ -1,30 +1,42 @@
 # bw-tui
 
-A terminal UI for [Bitwarden](https://bitwarden.com/). It does **not** talk to the Bitwarden API or handle any crypto itself. It just drives the official [`bw` CLI](https://bitwarden.com/help/cli/) and gives it a nicer interface than a shell script with `fzf`.
+A terminal UI for [Bitwarden](https://bitwarden.com/). It just drives the official [`bw` CLI](https://bitwarden.com/help/cli/) and gives it an interface.
 
-This is a personal project. I built it and use it for my own setup (Sway on Wayland, self-hosted Bitwarden server). I'm not affiliated with Bitwarden in any way. Use it at your own risk, and read the code before you trust it with your vault.
+This is a personal project. I'm not affiliated with Bitwarden in any way. Use it at your own risk.
 
 ## Two versions
 
-There are two ways to use this project, in two different folders: a full Rust TUI in [`src/`](#rust-version-full), and a lite bash script in [`bash/`](#bash-version-lite). Both talk to the same `bw` CLI and share the same config file and cached session, so you can mix them. See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for why both exist, how they relate, and design notes on the clipboard handling and session auto-lock.
+There are two version for this project: The Rust TUI, and a lite bash script in [`bash/`](#bash-version-lite). Both talk to the same `bw` CLI and share the same config file and cached session, so you can mix them. See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for why both exist.
 
 ## Dependencies
 
-| Program                                     | Purpose                 | Needed for |
-| ------------------------------------------- | ----------------------- | ---------- |
-| [`bw` CLI](https://bitwarden.com/help/cli/) | talks to Bitwarden      | both       |
-| Rust toolchain                              | build                   | Rust       |
-| `fzf`                                       | item picker             | Bash       |
-| `jq`                                        | parse config/`bw` JSON  | Bash       |
-| `wl-clipboard`                              | clipboard               | Wayland    |
-| `cliphist`                                  | clear clipboard history | Wayland    |
-| `libnotify`                                 | desktop notifications   | Wayland    |
-| `clip.exe`                                  | clipboard               | WSL2       |
-| A [Nerd Font](https://www.nerdfonts.com/)   | UI icons                | both       |
+| Program          | Purpose                 | Needed for              | Platform      |
+| ---------------- | ----------------------- | ----------------------- | ------------- |
+| `bw` CLI         | talks to Bitwarden      | Bash and Rust           | Both          |
+| `Rust toolchain` | compiling program       | Rust (only for compile) | Both          |
+| `fzf`            | item picker             | Bash                    | Both          |
+| `jq`             | parse config/`bw` JSON  | Bash                    | Both          |
+| `wl-clipboard`   | clipboard               | Bash and Rust           | Linux Wayland |
+| `cliphist`       | clear clipboard history | Bash and Rust           | Both          |
+| `libnotify`      | desktop notifications   | Bash and Rust           | Linux Wayland |
+| `clip.exe`       | clipboard               | Bash and Rust           | WSL2          |
+| A Nerd Font      | UI icons                | Bash and Rust           | Both          |
 
 ---
 
-## Rust version (full)
+## Rust version
+
+### Install
+
+You can download a prebuilt binary from the [Releases](https://github.com/ncorrea-13/bw-tui/releases/latest)
+Also you can build it yourself:
+
+```sh
+git clone https://github.com/ncorrea-13/bw-tui
+cd bw-tui
+cargo build --release
+cp target/release/bw-tui ~/.local/bin/bw-tui
+```
 
 ### Features
 
@@ -40,13 +52,6 @@ There are two ways to use this project, in two different folders: a full Rust TU
 
 Built first for a Wayland setup, and it also runs under WSL2. See [Dependencies](#dependencies).
 
-### Build
-
-```sh
-cargo build --release
-./target/release/bw-tui
-```
-
 ### Keybindings
 
 See [`KEYBINDINGS.md`](./KEYBINDINGS.md) for the full reference (Vault tab, item detail popup, search mode, Generator tab, Account tab).
@@ -59,26 +64,16 @@ See [Testing strategy](./ARCHITECTURE.md#testing-strategy) in ARCHITECTURE.md.
 
 ## Bash version (lite)
 
-The script that started this project. It's in [`bash/bw-tui.sh`](bash/bw-tui.sh) and it does one thing: unlock the vault, show your items in `fzf`, and copy what you picked. No tabs, no folders view, no generator, just a fast picker for logins, notes and cards.
-
-What it does, step by step:
-
-1. Reads/creates the same `config.json` the Rust version uses.
-2. Checks if there's a cached session under `~/.cache/bw-tui/` and if it's still fresh. If not, it asks for your master password and unlocks the vault.
-3. Lists your items with `bw list items` and shows them in `fzf`.
-4. Depending on the item type:
-   - **Login** → copies the password.
-   - **Note** → copies the note text.
-   - **Card** → asks if you want the number or the CVV, then copies it.
-5. Copies it to the clipboard. On native Wayland it auto-clears after `clipboard_clear_secs`; on WSL2 it doesn't. See [Clipboard backends](./ARCHITECTURE.md#clipboard-backends) in ARCHITECTURE.md.
+The script that started this project. It follows the Kiss principle and only do one thing: unlock the vault, show your items, and copy the password or the secret you picked. No tabs, no folders view, no generator, just a fast picker for logins, notes and cards.
 
 It also starts a background job that locks the vault again once the session times out, so you don't have to remember to lock it yourself. See [Dependencies](#dependencies).
 
 ### Usage
 
 ```sh
+wget 'https://github.com/ncorrea-13/bw-tui/blob/main/bash/bw-tui.sh'
 chmod +x bash/bw-tui.sh
-./bash/bw-tui.sh
+cp bw-tui.sh ~/.local/bin/bw-tui.sh
 ```
 
 It's meant to be bound to a keyboard shortcut in your window manager, so it pops up, you copy something, and it closes. The same way you'd use the Rust version as a popup.
@@ -87,7 +82,7 @@ It's meant to be bound to a keyboard shortcut in your window manager, so it pops
 
 ## Configuration
 
-Both versions share the same config file: `~/.config/bw-tui/config.json` (or `$XDG_CONFIG_HOME/bw-tui/config.json` if you set that variable). Whichever version you run first creates it with these defaults:
+Both versions create and use the same config file: `~/.config/bw-tui/config.json` with these defaults. There's no settings screen so you have to edit it manually.
 
 ```json
 {
@@ -104,12 +99,10 @@ Both versions share the same config file: `~/.config/bw-tui/config.json` (or `$X
 }
 ```
 
-- `bw_cmd`: how to call the Bitwarden CLI. It's split into words before running, so it can also be a wrapper, e.g. `"flatpak run --command=bw com.bitwarden.desktop"`.
-- `session_max_age_secs`: how long a cached session stays valid before you have to unlock again (for auto-lock).
-- `clipboard_clear_secs`: how long a copied secret stays on the clipboard before it gets wiped.
-- `generator`: the Generator tab's starting options (Rust version only). You can still change them per-session from the tab itself.
-
-The file is plain JSON on purpose: both sides already parse JSON elsewhere, so it added no new dependency. Edit it directly; there's no settings screen.
+- `bw_cmd`: how to call the Bitwarden CLI. You can define here if bw is not in your $PATH. It can also be a wrapper, e.g. `"flatpak run --command=bw com.bitwarden.desktop"`.
+- `session_max_age_secs`: Time for the auto-lock background job to wait before locking the vault again.
+- `clipboard_clear_secs`: How long a secret stays on the clipboard before it gets wiped.
+- `generator`: the Generator tab's starting options. You can still change them per-session from the tab itself.
 
 ## Status
 
