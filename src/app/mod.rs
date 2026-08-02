@@ -272,7 +272,10 @@ impl App {
     }
 
     pub fn session_age(&self) -> u64 {
-        #[allow(clippy::unwrap_used, reason = "system clock is never before UNIX_EPOCH")]
+        #[allow(
+            clippy::unwrap_used,
+            reason = "system clock is never before UNIX_EPOCH"
+        )]
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
