@@ -17,6 +17,28 @@ pub(super) fn bw_command() -> Command {
     cmd
 }
 
+fn friendly_error(stderr: &str) -> String {
+    let lower = stderr.to_lowercase();
+    if lower.contains("decryption operation failed") || lower.contains("cryptography error") {
+        "incorrect master password".to_string()
+    } else if lower.contains("two-step") || lower.contains("two factor") || lower.contains("2fa") {
+        "two-factor code required or incorrect".to_string()
+    } else {
+        let trimmed = stderr.trim();
+        if trimmed.is_empty() {
+            "bw gave no error output — check your connection to the server".to_string()
+        } else {
+            trimmed.to_string()
+        }
+    }
+}
+
+fn session_expired(stderr: &[u8]) -> bool {
+    String::from_utf8_lossy(stderr)
+        .to_lowercase()
+        .contains("master password")
+}
+
 pub fn unlock(password: &str) -> Result<String> {
     const ENV_VAR: &str = "BW_TUI_PASSWORD";
     let out = bw_command()
@@ -27,12 +49,14 @@ pub fn unlock(password: &str) -> Result<String> {
         .context("could not run `bw unlock`")?;
 
     if !out.status.success() {
-        let stderr = String::from_utf8_lossy(&out.stderr);
-        bail!("bw unlock failed: {}", stderr.trim());
+        bail!(
+            "bw unlock failed: {}",
+            friendly_error(&String::from_utf8_lossy(&out.stderr))
+        );
     }
     let key = String::from_utf8_lossy(&out.stdout).trim().to_string();
     if key.is_empty() {
-        bail!("wrong master password");
+        bail!("incorrect master password");
     }
     Ok(key)
 }
@@ -46,8 +70,11 @@ pub fn list_items(session: &str) -> Result<Vec<Item>> {
     if !out.status.success() {
         bail!(
             "bw list items failed: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
+            friendly_error(&String::from_utf8_lossy(&out.stderr))
         );
+    }
+    if session_expired(&out.stderr) {
+        bail!("session expired, unlock the vault again");
     }
     let items: Vec<Item> =
         serde_json::from_slice(&out.stdout).context("could not parse bw's response")?;
@@ -65,8 +92,11 @@ pub fn create_item(new_item: &NewItem, session: &str) -> Result<Item> {
     if !out.status.success() {
         bail!(
             "could not create the item: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
+            friendly_error(&String::from_utf8_lossy(&out.stderr))
         );
+    }
+    if session_expired(&out.stderr) {
+        bail!("session expired, unlock the vault again");
     }
     serde_json::from_slice(&out.stdout).context("could not parse the created item")
 }
@@ -80,8 +110,11 @@ pub fn get_item(id: &str, session: &str) -> Result<serde_json::Value> {
     if !out.status.success() {
         bail!(
             "could not get the item: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
+            friendly_error(&String::from_utf8_lossy(&out.stderr))
         );
+    }
+    if session_expired(&out.stderr) {
+        bail!("session expired, unlock the vault again");
     }
     serde_json::from_slice(&out.stdout).context("could not parse the item")
 }
@@ -177,8 +210,11 @@ pub fn edit_item(id: &str, patch: &ItemPatch, session: &str) -> Result<Item> {
     if !out.status.success() {
         bail!(
             "could not edit the item: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
+            friendly_error(&String::from_utf8_lossy(&out.stderr))
         );
+    }
+    if session_expired(&out.stderr) {
+        bail!("session expired, unlock the vault again");
     }
     serde_json::from_slice(&out.stdout).context("could not parse the edited item")
 }
@@ -192,8 +228,11 @@ pub fn get_password(id: &str, session: &str) -> Result<String> {
     if !out.status.success() {
         bail!(
             "could not get the password: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
+            friendly_error(&String::from_utf8_lossy(&out.stderr))
         );
+    }
+    if session_expired(&out.stderr) {
+        bail!("session expired, unlock the vault again");
     }
     Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
 }
@@ -207,8 +246,11 @@ pub fn get_totp(id: &str, session: &str) -> Result<String> {
     if !out.status.success() {
         bail!(
             "could not get the TOTP code: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
+            friendly_error(&String::from_utf8_lossy(&out.stderr))
         );
+    }
+    if session_expired(&out.stderr) {
+        bail!("session expired, unlock the vault again");
     }
     Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
 }
@@ -222,7 +264,7 @@ pub fn status() -> Result<Status> {
     if !out.status.success() {
         bail!(
             "bw status failed: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
+            friendly_error(&String::from_utf8_lossy(&out.stderr))
         );
     }
     serde_json::from_slice(&out.stdout).context("could not parse `bw status`")
@@ -237,7 +279,7 @@ pub fn config_server(url: &str) -> Result<()> {
     if !out.status.success() {
         bail!(
             "could not configure the server: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
+            friendly_error(&String::from_utf8_lossy(&out.stderr))
         );
     }
     Ok(())
@@ -307,10 +349,13 @@ pub fn login(
         {
             return Ok(LoginOutcome::TwoFactorRequired);
         }
-        bail!("bw login failed: {}", stderr.trim());
+        bail!("bw login failed: {}", friendly_error(&stderr));
     }
     let key = stdout.trim().to_string();
     if key.is_empty() {
+        if session_expired(stderr.as_bytes()) {
+            bail!("bw did not receive the master password, check the server connection");
+        }
         bail!("could not log in");
     }
     Ok(LoginOutcome::Success(key))
@@ -325,7 +370,7 @@ pub fn logout() -> Result<()> {
     if !out.status.success() {
         bail!(
             "could not log out: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
+            friendly_error(&String::from_utf8_lossy(&out.stderr))
         );
     }
     clear_cached_session();
@@ -341,8 +386,11 @@ pub fn sync(session: &str) -> Result<()> {
     if !out.status.success() {
         bail!(
             "could not sync: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
+            friendly_error(&String::from_utf8_lossy(&out.stderr))
         );
+    }
+    if session_expired(&out.stderr) {
+        bail!("session expired, unlock the vault again");
     }
     Ok(())
 }
@@ -356,8 +404,11 @@ pub fn list_folders(session: &str) -> Result<Vec<Folder>> {
     if !out.status.success() {
         bail!(
             "could not list folders: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
+            friendly_error(&String::from_utf8_lossy(&out.stderr))
         );
+    }
+    if session_expired(&out.stderr) {
+        bail!("session expired, unlock the vault again");
     }
     let folders: Vec<Folder> =
         serde_json::from_slice(&out.stdout).context("could not parse bw's response")?;
@@ -393,8 +444,46 @@ pub fn generate(opts: &GenerateOptions) -> Result<String> {
     if !out.status.success() {
         bail!(
             "could not generate a password: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
+            friendly_error(&String::from_utf8_lossy(&out.stderr))
         );
     }
     Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Real stderr captured from `bw` 2026.7.0 while testing this against a
+    // live server: wrong master password, and a stale/invalid --session
+    // token falling back to an interactive prompt with stdin closed.
+    const WRONG_PASSWORD_STDERR: &str = "ERROR bitwarden_crypto::keys::master_key: error=The decryption operation failed\n\nERROR bitwarden_core::client::internal: error=Cryptography error, The decryption operation failed\n\nERROR bitwarden_core::key_management::crypto: error=Cryptography error, The decryption operation failed\n\nCryptography error, The decryption operation failed";
+    const STALE_SESSION_STDERR: &str = "? Master password: [input is hidden] \u{1b}[37D\u{1b}[37C";
+
+    #[test]
+    fn friendly_error_classifies_known_bw_failures() {
+        assert_eq!(
+            friendly_error(WRONG_PASSWORD_STDERR),
+            "incorrect master password"
+        );
+        assert_eq!(
+            friendly_error("Two-step login code."),
+            "two-factor code required or incorrect"
+        );
+        assert_eq!(
+            friendly_error("You are not logged in."),
+            "You are not logged in."
+        );
+        assert_eq!(
+            friendly_error(""),
+            "bw gave no error output — check your connection to the server"
+        );
+    }
+
+    #[test]
+    fn session_expired_detects_the_interactive_prompt_leak() {
+        assert!(session_expired(STALE_SESSION_STDERR.as_bytes()));
+        assert!(!session_expired(b""));
+        assert!(!session_expired(b"You are not logged in."));
+    }
 }
