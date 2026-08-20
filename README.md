@@ -106,7 +106,7 @@ Both versions create and use the same config file: `~/.config/bw-tui/config.json
 
 ## Status
 
-Actively maintained, but built for my own use first. Issues and PRs are welcome if you find this useful too.
+**Stable / Feature-complete.** This software does everything I need it to do. I'll keep it working if dependencies break, but no new features are planned. Issues and PRs are still welcome.
 
 ---
 
