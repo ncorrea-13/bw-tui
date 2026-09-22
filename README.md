@@ -69,13 +69,21 @@ Built first for a Wayland setup, and it also runs under WSL2. See [Dependencies]
 
 ### Screenshots
 
-![Vault](./pictures/main.png)
+<p align="center">
+  <img src="./pictures/main.png" alt="Vault" width="600">
+</p>
 
-![Item detail](./pictures/detail.png)
+<p align="center">
+  <img src="./pictures/detail.png" alt="Item detail" width="600">
+</p>
 
-![Generator](./pictures/generator.png)
+<p align="center">
+  <img src="./pictures/generator.png" alt="Generator" width="600">
+</p>
 
-![Account](./pictures/account.png)
+<p align="center">
+  <img src="./pictures/account.png" alt="Account" width="600">
+</p>
 
 ### Keybindings
 
