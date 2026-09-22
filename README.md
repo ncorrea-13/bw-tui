@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./img/logo.svg" alt="bw-tui logo" width="450" />
+<img src="./logos/logo.svg" alt="bw-tui logo" width="450" />
 
 # bw-tui
 
@@ -66,6 +66,24 @@ cp target/release/bw-tui ~/.local/bin/bw-tui
 - **Config file**: reads `~/.config/bw-tui/config.json` and creates it with defaults on first run, instead of hardcoding things like the `bw` command, session timeout, or clipboard-clear delay. See [Configuration](#configuration).
 
 Built first for a Wayland setup, and it also runs under WSL2. See [Dependencies](#dependencies).
+
+### Screenshots
+
+<p align="center">
+  <img src="./pictures/main.png" alt="Vault" width="600">
+</p>
+
+<p align="center">
+  <img src="./pictures/detail.png" alt="Item detail" width="600">
+</p>
+
+<p align="center">
+  <img src="./pictures/generator.png" alt="Generator" width="600">
+</p>
+
+<p align="center">
+  <img src="./pictures/account.png" alt="Account" width="600">
+</p>
 
 ### Keybindings
 
