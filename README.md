@@ -1,8 +1,23 @@
+<div align="center">
+
+<img src="./img/logo.svg" alt="bw-tui logo" width="450" />
+
 # bw-tui
+
+**A terminal UI for Bitwarden**
+
+[![CI](https://github.com/ncorrea-13/bw-tui/actions/workflows/ci.yml/badge.svg)](https://github.com/ncorrea-13/bw-tui/actions/workflows/ci.yml)
+[![Rust](https://img.shields.io/badge/Rust-2024-000000?logo=rust&logoColor=white)](https://www.rust-lang.org)
+[![Bitwarden CLI](https://img.shields.io/badge/Bitwarden-CLI-175DDC?logo=bitwarden&logoColor=white)](https://bitwarden.com/help/cli/)
+[![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+
+</div>
+
+---
 
 A terminal UI for [Bitwarden](https://bitwarden.com/). It just drives the official [`bw` CLI](https://bitwarden.com/help/cli/) and gives it an interface.
 
-This is a personal project. I'm not affiliated with Bitwarden in any way. Use it at your own risk.
+This is a personal project. I'm not affiliated with Bitwarden in any way (see [Disclaimer](#disclaimer)). Use it at your own risk.
 
 ## Two versions
 
@@ -40,14 +55,14 @@ cp target/release/bw-tui ~/.local/bin/bw-tui
 
 ### Features
 
-- **Full session flow**: on startup it checks `bw status` and shows the right screen: server setup if you're not logged in at all, email + password (+ 2FA) if you need to log in, or just the master password if the CLI is already logged in but locked. This runs on a background thread, so the UI doesn't freeze while `bw` is working, you get a spinner instead.
-- **Session cache compatible with the bash version**: it reuses `~/.cache/bw-tui/session`, so if you already unlocked the vault with the bash script, it picks up that session instead of asking again.
+- **Full session flow**: on startup it checks bw status and shows the right screen: server setup if you're not logged in at all, email + password (+ 2FA) if you need to log in, or just the master password.
+- **Session cache compatible with the bash version**: it reuses the cached session session, so if you already unlocked the vault with the bash script, it picks up that session instead of asking again.
 - **Popup-friendly Vault tab**: one full-width item list by default. Folders show in a top bar and item detail opens as a popup (`Enter`) instead of taking a whole column.
 - **Create and edit items**: logins, secure notes, cards, and identities, without leaving the Vault tab (`n` to create, `e` on the detail popup to edit). The form has its own password generator (`Ctrl+G`) sharing the Generator tab's settings, and `Ctrl+R` to pull up a login's current password while editing.
 - **Vim-style keys** in the vault list: `j`/`k` to move, `gg`/`G` to jump to top/bottom, `h`/`l` to switch folders, `/` to search.
-- **Generator tab**: wraps `bw generate` with length and character-set options.
+- **Generator tab**: uses bw generate with length and character-set options.
 - **Account tab**: shows the server, account email and last sync time, and lets you sync, lock or log out.
-- **Clipboard handling**: it detects at startup if it's running under WSL or a native Linux/Wayland host, and picks the right way to copy things. See [Clipboard backends](./ARCHITECTURE.md#clipboard-backends) in ARCHITECTURE.md.
+- **Clipboard handling**: it detects at startup if it's running under WSL2 or a native Linux/Wayland host, and picks the right way to copy things. See [Clipboard backends](./ARCHITECTURE.md#clipboard-backends) in ARCHITECTURE.md.
 - **Config file**: reads `~/.config/bw-tui/config.json` and creates it with defaults on first run, instead of hardcoding things like the `bw` command, session timeout, or clipboard-clear delay. See [Configuration](#configuration).
 
 Built first for a Wayland setup, and it also runs under WSL2. See [Dependencies](#dependencies).
@@ -107,6 +122,12 @@ Both versions create and use the same config file: `~/.config/bw-tui/config.json
 ## Status
 
 **Stable / Feature-complete.** This software does everything I need it to do. I'll keep it working if dependencies break, but no new features are planned. Issues and PRs are still welcome.
+
+---
+
+## Disclaimer
+
+bw-tui is an independent, unofficial project. It's not affiliated with, endorsed by, or sponsored by Bitwarden Inc. "Bitwarden" is a trademark of Bitwarden Inc. This project only talks to the official `bw` CLI over its documented interface, no reverse engineering, no bundled Bitwarden code.
 
 ---
 
