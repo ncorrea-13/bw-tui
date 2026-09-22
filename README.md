@@ -17,7 +17,7 @@
 
 A terminal UI for [Bitwarden](https://bitwarden.com/). It just drives the official [`bw` CLI](https://bitwarden.com/help/cli/) and gives it an interface.
 
-This is a personal project. I'm not affiliated with Bitwarden in any way. Use it at your own risk.
+This is a personal project. I'm not affiliated with Bitwarden in any way (see [Disclaimer](#disclaimer)). Use it at your own risk.
 
 ## Two versions
 
@@ -122,6 +122,12 @@ Both versions create and use the same config file: `~/.config/bw-tui/config.json
 ## Status
 
 **Stable / Feature-complete.** This software does everything I need it to do. I'll keep it working if dependencies break, but no new features are planned. Issues and PRs are still welcome.
+
+---
+
+## Disclaimer
+
+bw-tui is an independent, unofficial project. It's not affiliated with, endorsed by, or sponsored by Bitwarden Inc. "Bitwarden" is a trademark of Bitwarden Inc. This project only talks to the official `bw` CLI over its documented interface, no reverse engineering, no bundled Bitwarden code.
 
 ---
 
