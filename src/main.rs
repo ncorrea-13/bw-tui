@@ -23,6 +23,11 @@ use std::time::Duration;
 const TICK: Duration = Duration::from_millis(250);
 
 fn main() -> Result<()> {
+    if std::env::args().nth(1).as_deref() == Some("--version") {
+        println!("bw-tui {}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
+
     enable_raw_mode()?;
     let mut out = stdout();
     execute!(out, EnterAlternateScreen)?;

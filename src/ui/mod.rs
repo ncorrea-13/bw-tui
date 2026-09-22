@@ -166,6 +166,15 @@ fn draw_tab_bar(frame: &mut Frame, app: &App, area: Rect) {
         spans.push(Span::styled(*label, style));
     }
     frame.render_widget(Paragraph::new(Line::from(spans)), area);
+
+    let version = Span::styled(
+        format!("bw-tui v{}", env!("CARGO_PKG_VERSION")),
+        Style::default().fg(ACCENT),
+    );
+    frame.render_widget(
+        Paragraph::new(Line::from(version)).alignment(Alignment::Right),
+        area,
+    );
 }
 
 fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
