@@ -211,7 +211,7 @@ impl App {
                     self.busy = false;
                     self.busy_label = None;
                 }
-                if silent && (!matches!(self.screen, Screen::Main) || self.auto_sync_stale) {
+                if !matches!(self.screen, Screen::Main) || (silent && self.auto_sync_stale) {
                     return;
                 }
                 match result {
