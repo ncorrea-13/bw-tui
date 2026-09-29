@@ -245,3 +245,95 @@ fn folder_bar_wraps_instead_of_clipping_at_narrow_width() {
         );
     }
 }
+
+fn synced(items: Vec<Item>) -> BwEvent {
+    BwEvent::Synced(Ok(bw::SyncLoad {
+        status: None,
+        items,
+        folders: vec![],
+    }))
+}
+
+#[test]
+fn silent_sync_keeps_selection_and_detail_by_id() {
+    let mut app = vault_app(
+        vec![item("Alpha", None), item("Beta", None), item("Gamma", None)],
+        vec![],
+    );
+    app.selected = 1;
+    app.detail_open = true;
+    app.auto_sync_running = true;
+
+    app.apply_bw_event(synced(vec![
+        item("Alpha", None),
+        item("Aardvark", None),
+        item("Beta", None),
+        item("Gamma", None),
+    ]));
+
+    assert_eq!(app.selected_item().unwrap().id, "Beta");
+    assert!(app.detail_open);
+    assert!(!app.auto_sync_running);
+    assert!(app.status.is_none(), "silent sync must not set a status");
+}
+
+#[test]
+fn silent_sync_is_dropped_after_a_write() {
+    let mut app = vault_app(vec![item("Alpha", None)], vec![]);
+    app.auto_sync_running = true;
+    app.auto_sync_stale = true;
+
+    app.apply_bw_event(synced(vec![]));
+
+    assert_eq!(app.items.len(), 1, "stale snapshot must not clobber items");
+    assert!(!app.auto_sync_running);
+}
+
+#[test]
+fn silent_sync_is_dropped_when_locked() {
+    let mut app = vault_app(vec![], vec![]);
+    app.screen = Screen::Loading;
+    app.auto_sync_running = true;
+
+    app.apply_bw_event(synced(vec![item("Alpha", None)]));
+
+    assert!(app.items.is_empty(), "locked vault must stay empty");
+}
+
+#[test]
+fn silent_sync_does_not_clear_busy_of_another_action() {
+    let mut app = vault_app(vec![item("Alpha", None)], vec![]);
+    app.busy = true;
+    app.busy_label = Some("Copying…".to_string());
+    app.auto_sync_running = true;
+
+    app.apply_bw_event(synced(vec![item("Alpha", None)]));
+
+    assert!(app.busy);
+    assert_eq!(app.busy_label.as_deref(), Some("Copying…"));
+}
+
+#[test]
+fn manual_sync_clears_busy_and_reports() {
+    let mut app = vault_app(vec![], vec![]);
+    app.busy = true;
+    app.busy_label = Some("Syncing…".to_string());
+
+    app.apply_bw_event(synced(vec![item("Alpha", None)]));
+
+    assert!(!app.busy);
+    assert_eq!(app.items.len(), 1);
+    assert!(app.status.is_some());
+}
+
+#[test]
+fn manual_sync_is_dropped_when_locked() {
+    let mut app = vault_app(vec![], vec![]);
+    app.screen = Screen::Loading;
+    app.busy = true;
+
+    app.apply_bw_event(synced(vec![item("Alpha", None)]));
+
+    assert!(app.items.is_empty(), "locked vault must stay empty");
+    assert!(!app.busy);
+}
