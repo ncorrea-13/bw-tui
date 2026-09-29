@@ -167,12 +167,19 @@ fn draw_tab_bar(frame: &mut Frame, app: &App, area: Rect) {
     }
     frame.render_widget(Paragraph::new(Line::from(spans)), area);
 
-    let version = Span::styled(
+    let mut right = vec![];
+    if app.auto_sync_running {
+        right.push(Span::styled(
+            format!("{} syncing  ", app.spinner()),
+            Style::default().fg(WARN),
+        ));
+    }
+    right.push(Span::styled(
         format!("bw-tui v{}", env!("CARGO_PKG_VERSION")),
         Style::default().fg(ACCENT),
-    );
+    ));
     frame.render_widget(
-        Paragraph::new(Line::from(version)).alignment(Alignment::Right),
+        Paragraph::new(Line::from(right)).alignment(Alignment::Right),
         area,
     );
 }

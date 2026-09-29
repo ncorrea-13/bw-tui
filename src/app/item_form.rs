@@ -396,6 +396,7 @@ impl App {
 
         form.error = None;
         self.busy = true;
+        self.auto_sync_stale = true;
 
         match editing_id {
             Some(id) => {
