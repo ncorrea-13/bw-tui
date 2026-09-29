@@ -206,17 +206,37 @@ impl App {
                 }
             }
             BwEvent::Synced(result) => {
-                self.busy = false;
-                self.busy_label = None;
+                let silent = std::mem::take(&mut self.auto_sync_running);
+                if !silent {
+                    self.busy = false;
+                    self.busy_label = None;
+                }
+                if !matches!(self.screen, Screen::Main) || (silent && self.auto_sync_stale) {
+                    return;
+                }
                 match result {
                     Ok(load) => {
                         if let Some(status) = load.status {
                             self.server_status = Some(status);
                         }
+                        let keep = self
+                            .selected_item()
+                            .map(|i| i.id.clone())
+                            .filter(|_| silent);
+                        let view = (self.detail_open, self.reveal.take(), self.reveal_cvv.take());
                         self.items = load.items;
                         self.folders = load.folders;
                         self.refilter();
-                        self.set_status("\u{f021} Synced with server");
+                        if let Some(id) = keep
+                            && let Some(pos) =
+                                self.filtered.iter().position(|&i| self.items[i].id == id)
+                        {
+                            self.selected = pos;
+                            (self.detail_open, self.reveal, self.reveal_cvv) = view;
+                        }
+                        if !silent {
+                            self.set_status("\u{f021} Synced with server");
+                        }
                     }
                     Err(e) => self.set_status(format!("\u{f071} {e}")),
                 }

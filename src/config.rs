@@ -12,6 +12,7 @@ pub struct Config {
     pub bw_cmd: String,
     pub session_max_age_secs: u64,
     pub clipboard_clear_secs: u64,
+    pub auto_sync_secs: u64,
     pub generator: GenerateOptions,
 }
 
@@ -21,6 +22,7 @@ impl Default for Config {
             bw_cmd: "bw".to_string(),
             session_max_age_secs: 1800,
             clipboard_clear_secs: 9,
+            auto_sync_secs: 0,
             generator: GenerateOptions::default(),
         }
     }

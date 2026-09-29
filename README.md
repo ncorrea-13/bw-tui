@@ -122,6 +122,7 @@ Both versions create and use the same config file: `~/.config/bw-tui/config.json
   "bw_cmd": "bw",
   "session_max_age_secs": 1800,
   "clipboard_clear_secs": 9,
+  "auto_sync_secs": 0,
   "generator": {
     "length": 20,
     "uppercase": true,
@@ -135,6 +136,7 @@ Both versions create and use the same config file: `~/.config/bw-tui/config.json
 - `bw_cmd`: how to call the Bitwarden CLI. You can define here if bw is not in your $PATH. It can also be a wrapper, e.g. `"flatpak run --command=bw com.bitwarden.desktop"`.
 - `session_max_age_secs`: Time for the auto-lock background job to wait before locking the vault again.
 - `clipboard_clear_secs`: How long a secret stays on the clipboard before it gets wiped.
+- `auto_sync_secs`: Sync with the server every N seconds while the vault is open and idle. `0` disables it, minimum effective value is 60. Auto-syncs are silent unless they fail.
 - `generator`: the Generator tab's starting options. You can still change them per-session from the tab itself.
 
 ## Status

@@ -149,6 +149,9 @@ pub struct App {
     pub busy: bool,
     pub busy_label: Option<String>,
     tick_count: u64,
+    last_sync: Instant,
+    pub auto_sync_running: bool,
+    auto_sync_stale: bool,
     matcher: SkimMatcherV2,
     bw_tx: Sender<BwEvent>,
     bw_rx: Receiver<BwEvent>,
@@ -186,6 +189,9 @@ impl App {
             busy: false,
             busy_label: None,
             tick_count: 0,
+            last_sync: Instant::now(),
+            auto_sync_running: false,
+            auto_sync_stale: false,
             matcher: SkimMatcherV2::default(),
             bw_tx,
             bw_rx,
@@ -269,6 +275,31 @@ impl App {
         {
             self.relock("\u{f023} Session expired, enter your master password again:");
         }
+        self.maybe_auto_sync();
+    }
+
+    fn maybe_auto_sync(&mut self) {
+        let secs = config::get().auto_sync_secs;
+        if secs == 0
+            || !matches!(self.screen, Screen::Main)
+            || self.busy
+            || self.auto_sync_running
+            || self.session.is_none()
+            || self.item_form.is_some()
+            || self.detail_open
+            || self.reveal.is_some()
+            || !matches!(self.vault_mode, VaultMode::Normal)
+            || self.last_sync.elapsed() < Duration::from_secs(secs.max(60))
+        {
+            return;
+        }
+        let Some(session) = self.session.clone() else {
+            return;
+        };
+        self.auto_sync_running = true;
+        self.auto_sync_stale = false;
+        self.last_sync = Instant::now();
+        self.spawn(move || BwEvent::Synced(bw::sync_and_refresh(&session)));
     }
 
     pub fn session_age(&self) -> u64 {
@@ -300,6 +331,7 @@ impl App {
         self.folders = folders;
         self.session = Some(key);
         self.session_started = ts;
+        self.last_sync = Instant::now();
         self.items = items;
         self.folder_index = 0;
         self.vault_mode = VaultMode::Normal;
@@ -709,12 +741,13 @@ impl App {
     // ---- Account tab -----------------------------------------------------
 
     pub fn sync_now(&mut self) {
-        if self.busy {
+        if self.busy || self.auto_sync_running {
             return;
         }
         let Some(session) = self.session.clone() else {
             return;
         };
+        self.last_sync = Instant::now();
         self.busy = true;
         self.busy_label = Some("Syncing…".to_string());
         self.spawn(move || BwEvent::Synced(bw::sync_and_refresh(&session)));
