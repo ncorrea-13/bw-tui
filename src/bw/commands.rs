@@ -219,24 +219,6 @@ pub fn edit_item(id: &str, patch: &ItemPatch, session: &str) -> Result<Item> {
     serde_json::from_slice(&out.stdout).context("could not parse the edited item")
 }
 
-pub fn get_password(id: &str, session: &str) -> Result<String> {
-    let out = bw_command()
-        .args(["get", "password", id, "--session", session])
-        .stdin(Stdio::null())
-        .output()
-        .context("could not run `bw get password`")?;
-    if !out.status.success() {
-        bail!(
-            "could not get the password: {}",
-            friendly_error(&String::from_utf8_lossy(&out.stderr))
-        );
-    }
-    if session_expired(&out.stderr) {
-        bail!("session expired, unlock the vault again");
-    }
-    Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
-}
-
 pub fn get_totp(id: &str, session: &str) -> Result<String> {
     let out = bw_command()
         .args(["get", "totp", id, "--session", session])

@@ -333,22 +333,28 @@ impl App {
     }
 
     pub fn reveal_current_password_in_item_form(&mut self) {
-        if self.busy {
-            return;
-        }
         let Some(form) = &self.item_form else {
             return;
         };
         let ItemFormMode::Edit { id } = &form.mode else {
             return;
         };
-        let id = id.clone();
-        let Some(session) = self.session.clone() else {
-            return;
-        };
-        self.busy = true;
-        self.busy_label = Some("Fetching current password…".to_string());
-        self.spawn(move || BwEvent::ItemFormPasswordRevealed(bw::get_password(&id, &session)));
+        let pw = self
+            .items
+            .iter()
+            .find(|i| &i.id == id)
+            .and_then(|i| i.password())
+            .map(|s| s.to_string());
+        if let Some(form) = &mut self.item_form {
+            match pw {
+                Some(pw) => {
+                    form.password = pw;
+                    form.password_revealed = true;
+                    form.error = None;
+                }
+                None => form.error = Some("This item has no password".to_string()),
+            }
+        }
     }
 
     pub fn submit_item_form(&mut self) {

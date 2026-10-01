@@ -11,7 +11,6 @@ pub struct UriData {
 #[derive(Debug, Clone, Deserialize)]
 pub struct LoginData {
     pub username: Option<String>,
-    #[allow(dead_code)]
     pub password: Option<String>,
     pub totp: Option<String>,
     pub uris: Option<Vec<UriData>>,
@@ -66,6 +65,14 @@ pub struct Item {
 impl Item {
     pub fn username(&self) -> Option<&str> {
         self.login.as_ref()?.username.as_deref()
+    }
+
+    pub fn password(&self) -> Option<&str> {
+        self.login
+            .as_ref()?
+            .password
+            .as_deref()
+            .filter(|p| !p.is_empty())
     }
 
     pub fn has_totp(&self) -> bool {

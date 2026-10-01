@@ -541,28 +541,23 @@ impl App {
     }
 
     pub fn copy_password(&mut self) {
-        if self.busy {
-            return;
-        }
-        let Some(item) = self.selected_item().cloned() else {
+        let Some(item) = self.selected_item() else {
             return;
         };
-        if item.item_type != 1 {
+        let Some(pw) = item.password().map(|s| s.to_string()) else {
             self.set_status("\u{f071} This item has no password");
             return;
-        }
-        let Some(session) = self.session.clone() else {
-            return;
         };
-        self.busy = true;
-        self.busy_label = Some(format!("Copying password for '{}'…", item.name));
-        self.spawn(move || {
-            let result = bw::get_password(&item.id, &session);
-            BwEvent::PasswordCopied {
-                item_name: item.name,
-                result,
-            }
-        });
+        let name = item.name.clone();
+        if let Err(e) = clipboard::copy(&pw) {
+            self.set_status(format!("\u{f071} {e}"));
+            return;
+        }
+        clipboard::notify(&format!("✅ Password copied: {name}"));
+        let secs = config::get().clipboard_clear_secs;
+        let note = clipboard::autoclear_note(secs);
+        self.set_status(format!("\u{f00c} Password for '{name}' copied{note}"));
+        clipboard::spawn_autoclear(pw, "password");
     }
 
     pub fn copy_username(&mut self) {
@@ -667,21 +662,11 @@ impl App {
         }
         match item.item_type {
             1 => {
-                if self.busy {
-                    return;
-                }
-                let Some(session) = self.session.clone() else {
+                let Some(pw) = item.password().map(|s| s.to_string()) else {
+                    self.set_status("\u{f071} This item has no password");
                     return;
                 };
-                self.busy = true;
-                self.busy_label = Some("Revealing password…".to_string());
-                self.spawn(move || {
-                    let result = bw::get_password(&item.id, &session);
-                    BwEvent::Revealed {
-                        item_id: item.id,
-                        result,
-                    }
-                });
+                self.reveal = Some((item.id, pw));
             }
             3 => {
                 let Some(number) = item.card.as_ref().and_then(|c| c.number.clone()) else {
