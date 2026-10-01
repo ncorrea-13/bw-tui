@@ -8,7 +8,7 @@ pub struct UriData {
     pub uri: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct LoginData {
     pub username: Option<String>,
     pub password: Option<String>,
@@ -16,7 +16,7 @@ pub struct LoginData {
     pub uris: Option<Vec<UriData>>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct CardData {
     #[serde(rename = "cardholderName")]
     pub cardholder_name: Option<String>,
@@ -39,7 +39,7 @@ pub struct IdentityData {
     pub phone: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct CustomField {
     pub name: Option<String>,
     pub value: Option<String>,
@@ -47,7 +47,7 @@ pub struct CustomField {
     pub field_type: u8,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct Item {
     pub id: String,
     pub name: String,
@@ -149,7 +149,7 @@ impl Item {
 
 // ---- Create/edit payloads -------------------------------------------------
 
-#[derive(Debug, Clone, Default, Serialize)]
+#[derive(Clone, Default, Serialize)]
 pub struct NewLogin {
     pub username: Option<String>,
     pub password: Option<String>,
@@ -165,7 +165,7 @@ pub struct NewIdentity {
     pub phone: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, Serialize)]
+#[derive(Clone, Default, Serialize)]
 pub struct NewCard {
     #[serde(rename = "cardholderName")]
     pub cardholder_name: Option<String>,
@@ -184,7 +184,7 @@ pub struct SecureNoteData {
     pub note_type: u8,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Clone, Serialize)]
 pub struct NewItem {
     #[serde(rename = "folderId")]
     pub folder_id: Option<String>,
@@ -199,7 +199,7 @@ pub struct NewItem {
     pub secure_note: Option<SecureNoteData>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Clone, Serialize)]
 pub struct ItemPatch {
     pub name: String,
     pub notes: Option<String>,
