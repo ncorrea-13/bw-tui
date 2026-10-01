@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::{ERROR, MUTED, TEXT, WARN, boxed};
-use crate::app::{App, LoginField};
+use crate::app::{App, LoginField, Screen};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout},
@@ -58,19 +58,23 @@ pub(super) fn draw_server_config(
     );
 }
 
-#[allow(clippy::too_many_arguments)]
-pub(super) fn draw_login(
-    frame: &mut Frame,
-    email: &str,
-    password: &str,
-    focus: LoginField,
-    awaiting_2fa: bool,
-    code: &str,
-    method: crate::app::TwoFactorMethod,
-    error: Option<&str>,
-    busy: bool,
-    spinner: &str,
-) {
+pub(super) fn draw_login(frame: &mut Frame, app: &App) {
+    let Screen::Login {
+        email,
+        password,
+        focus,
+        awaiting_2fa,
+        code,
+        method,
+        error,
+        busy,
+    } = &app.screen
+    else {
+        return;
+    };
+    let (focus, awaiting_2fa, method, busy) = (*focus, *awaiting_2fa, *method, *busy);
+    let error = error.as_deref();
+    let spinner = app.spinner();
     let inner = boxed(frame, "bw-tui — log in", 64, 11);
 
     if awaiting_2fa {
