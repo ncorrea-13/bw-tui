@@ -14,16 +14,8 @@ pub enum BwEvent {
     LoggedIn(anyhow::Result<bw::LoginFlowResult>),
     Unlocked(anyhow::Result<bw::VaultLoad>),
     ItemsRefreshed(anyhow::Result<bw::ItemsLoad>),
-    PasswordCopied {
-        item_name: String,
-        result: anyhow::Result<String>,
-    },
     TotpCopied {
         item_name: String,
-        result: anyhow::Result<String>,
-    },
-    Revealed {
-        item_id: String,
         result: anyhow::Result<String>,
     },
     Generated(anyhow::Result<String>),
@@ -31,7 +23,6 @@ pub enum BwEvent {
     LoggedOut(anyhow::Result<bw::StartOutcome>),
     ItemCreated(anyhow::Result<bw::Item>),
     ItemEdited(anyhow::Result<bw::Item>),
-    ItemFormPasswordRevealed(anyhow::Result<String>),
 }
 
 impl App {
@@ -145,27 +136,6 @@ impl App {
                     Err(e) => self.set_status(format!("\u{f071} Could not refresh: {e}")),
                 }
             }
-            BwEvent::PasswordCopied { item_name, result } => {
-                self.busy = false;
-                self.busy_label = None;
-                match result {
-                    Ok(pw) if !pw.is_empty() => {
-                        if let Err(e) = clipboard::copy(&pw) {
-                            self.set_status(format!("\u{f071} {e}"));
-                            return;
-                        }
-                        clipboard::notify(&format!("✅ Password copied: {item_name}"));
-                        let secs = crate::config::get().clipboard_clear_secs;
-                        let note = clipboard::autoclear_note(secs);
-                        self.set_status(format!(
-                            "\u{f00c} Password for '{item_name}' copied{note}"
-                        ));
-                        clipboard::spawn_autoclear(pw, "password");
-                    }
-                    Ok(_) => self.set_status("\u{f071} This item has no password"),
-                    Err(e) => self.set_status(format!("\u{f071} {e}")),
-                }
-            }
             BwEvent::TotpCopied { item_name, result } => {
                 self.busy = false;
                 self.busy_label = None;
@@ -183,14 +153,6 @@ impl App {
                         clipboard::spawn_autoclear(code, "TOTP");
                     }
                     Ok(_) => self.set_status("\u{f071} Could not generate the TOTP code"),
-                    Err(e) => self.set_status(format!("\u{f071} {e}")),
-                }
-            }
-            BwEvent::Revealed { item_id, result } => {
-                self.busy = false;
-                self.busy_label = None;
-                match result {
-                    Ok(pw) => self.reveal = Some((item_id, pw)),
                     Err(e) => self.set_status(format!("\u{f071} {e}")),
                 }
             }
@@ -300,21 +262,6 @@ impl App {
                             form.error = Some(e.to_string());
                         }
                     }
-                }
-            }
-            BwEvent::ItemFormPasswordRevealed(result) => {
-                self.busy = false;
-                self.busy_label = None;
-                let Some(form) = &mut self.item_form else {
-                    return;
-                };
-                match result {
-                    Ok(password) => {
-                        form.password = password;
-                        form.password_revealed = true;
-                        form.error = None;
-                    }
-                    Err(e) => form.error = Some(e.to_string()),
                 }
             }
         }

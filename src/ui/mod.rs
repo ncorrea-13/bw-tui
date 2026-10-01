@@ -34,27 +34,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
         Screen::ServerConfig { url, error, busy } => {
             auth::draw_server_config(frame, url, error.as_deref(), *busy, app.spinner())
         }
-        Screen::Login {
-            email,
-            password,
-            focus,
-            awaiting_2fa,
-            code,
-            method,
-            error,
-            busy,
-        } => auth::draw_login(
-            frame,
-            email,
-            password,
-            *focus,
-            *awaiting_2fa,
-            code,
-            *method,
-            error.as_deref(),
-            *busy,
-            app.spinner(),
-        ),
+        Screen::Login { .. } => auth::draw_login(frame, app),
         Screen::Unlock {
             email,
             password,

@@ -80,7 +80,7 @@ fi
 items_json=""
 if [ -f "$session_file" ]; then
   BW_SESSION=$(cat "$session_file")
-  items_json=$($BW_CMD list items --session "$BW_SESSION" </dev/null 2>/dev/null)
+  items_json=$(BW_SESSION="$BW_SESSION" $BW_CMD list items </dev/null 2>/dev/null)
   [ -n "$items_json" ] || {
     clear_session
     BW_SESSION=""
@@ -107,7 +107,7 @@ if [ -z "$BW_SESSION" ]; then
     disown
   fi
 
-  items_json=$($BW_CMD list items --session "$BW_SESSION")
+  items_json=$(BW_SESSION="$BW_SESSION" $BW_CMD list items)
 fi
 
 export BW_SESSION
@@ -139,7 +139,7 @@ item_type=$(echo "$items_json" | jq -r --arg id "$selection" '.[] | select(.id==
 
 case "$item_type" in
 1)
-  password=$($BW_CMD get password "$selection" --session "$BW_SESSION" 2>/dev/null)
+  password=$($BW_CMD get password "$selection" 2>/dev/null)
   if [ -z "$password" ]; then
     echo " Could not get the password for item ID '$selection'."
     read -r -p "Press Enter to close..."

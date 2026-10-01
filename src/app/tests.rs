@@ -226,8 +226,10 @@ fn folder_bar_wraps_instead_of_clipping_at_narrow_width() {
     let app = vault_app(vec![item("Alpha", None)], folders);
 
     let backend = TestBackend::new(90, 28);
-    let mut terminal = Terminal::new(backend).unwrap();
-    terminal.draw(|frame| crate::ui::draw(frame, &app)).unwrap();
+    let mut terminal = Terminal::new(backend).expect("create test terminal");
+    terminal
+        .draw(|frame| crate::ui::draw(frame, &app))
+        .expect("draw frame");
 
     let rendered: String = terminal
         .backend()
@@ -271,7 +273,7 @@ fn silent_sync_keeps_selection_and_detail_by_id() {
         item("Gamma", None),
     ]));
 
-    assert_eq!(app.selected_item().unwrap().id, "Beta");
+    assert_eq!(app.selected_item().expect("an item is selected").id, "Beta");
     assert!(app.detail_open);
     assert!(!app.auto_sync_running);
     assert!(app.status.is_none(), "silent sync must not set a status");
