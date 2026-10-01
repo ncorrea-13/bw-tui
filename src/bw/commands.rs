@@ -5,7 +5,7 @@ use super::model::*;
 use super::session::clear_cached_session;
 use anyhow::{Context, Result, bail};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
-use std::io::Read;
+use std::io::{Read, Write};
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
@@ -15,6 +15,19 @@ pub(super) fn bw_command() -> Command {
     let mut cmd = Command::new(program);
     cmd.args(parts);
     cmd
+}
+
+// Item payloads carry passwords: send them over stdin, never argv (/proc/<pid>/cmdline is world-readable).
+fn run_with_stdin(cmd: &mut Command, input: &str) -> std::io::Result<std::process::Output> {
+    let mut child = cmd
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin.write_all(input.as_bytes())?;
+    }
+    child.wait_with_output()
 }
 
 fn friendly_error(stderr: &str) -> String {
@@ -63,7 +76,8 @@ pub fn unlock(password: &str) -> Result<String> {
 
 pub fn list_items(session: &str) -> Result<Vec<Item>> {
     let out = bw_command()
-        .args(["list", "items", "--session", session])
+        .args(["list", "items"])
+        .env("BW_SESSION", session)
         .stdin(Stdio::null())
         .output()
         .context("could not run `bw list items`")?;
@@ -84,11 +98,13 @@ pub fn list_items(session: &str) -> Result<Vec<Item>> {
 pub fn create_item(new_item: &NewItem, session: &str) -> Result<Item> {
     let new_item_json = serde_json::to_string(new_item).context("could not encode the new item")?;
     let new_item_base64 = STANDARD.encode(new_item_json);
-    let out = bw_command()
-        .args(["create", "item", &new_item_base64, "--session", session])
-        .stdin(Stdio::null())
-        .output()
-        .context("could not run `bw create item`")?;
+    let out = run_with_stdin(
+        bw_command()
+            .args(["create", "item"])
+            .env("BW_SESSION", session),
+        &new_item_base64,
+    )
+    .context("could not run `bw create item`")?;
     if !out.status.success() {
         bail!(
             "could not create the item: {}",
@@ -103,7 +119,8 @@ pub fn create_item(new_item: &NewItem, session: &str) -> Result<Item> {
 
 pub fn get_item(id: &str, session: &str) -> Result<serde_json::Value> {
     let out = bw_command()
-        .args(["get", "item", id, "--session", session])
+        .args(["get", "item", id])
+        .env("BW_SESSION", session)
         .stdin(Stdio::null())
         .output()
         .context("could not run `bw get item`")?;
@@ -195,18 +212,13 @@ pub fn edit_item(id: &str, patch: &ItemPatch, session: &str) -> Result<Item> {
     let edited_item_json =
         serde_json::to_string(&raw_item).context("could not encode the edited item")?;
     let edited_item_base64 = STANDARD.encode(edited_item_json);
-    let out = bw_command()
-        .args([
-            "edit",
-            "item",
-            id,
-            &edited_item_base64,
-            "--session",
-            session,
-        ])
-        .stdin(Stdio::null())
-        .output()
-        .context("could not run `bw edit item`")?;
+    let out = run_with_stdin(
+        bw_command()
+            .args(["edit", "item", id])
+            .env("BW_SESSION", session),
+        &edited_item_base64,
+    )
+    .context("could not run `bw edit item`")?;
     if !out.status.success() {
         bail!(
             "could not edit the item: {}",
@@ -221,7 +233,8 @@ pub fn edit_item(id: &str, patch: &ItemPatch, session: &str) -> Result<Item> {
 
 pub fn get_totp(id: &str, session: &str) -> Result<String> {
     let out = bw_command()
-        .args(["get", "totp", id, "--session", session])
+        .args(["get", "totp", id])
+        .env("BW_SESSION", session)
         .stdin(Stdio::null())
         .output()
         .context("could not run `bw get totp`")?;
@@ -361,7 +374,8 @@ pub fn logout() -> Result<()> {
 
 pub fn sync(session: &str) -> Result<()> {
     let out = bw_command()
-        .args(["sync", "--session", session])
+        .args(["sync"])
+        .env("BW_SESSION", session)
         .stdin(Stdio::null())
         .output()
         .context("could not run `bw sync`")?;
@@ -379,7 +393,8 @@ pub fn sync(session: &str) -> Result<()> {
 
 pub fn list_folders(session: &str) -> Result<Vec<Folder>> {
     let out = bw_command()
-        .args(["list", "folders", "--session", session])
+        .args(["list", "folders"])
+        .env("BW_SESSION", session)
         .stdin(Stdio::null())
         .output()
         .context("could not run `bw list folders`")?;
@@ -434,6 +449,14 @@ pub fn generate(opts: &GenerateOptions) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn run_with_stdin_delivers_input_over_stdin_not_argv() {
+        let mut cmd = Command::new("sh");
+        cmd.args(["-c", "cat; echo \"argc=$#\""]);
+        let out = run_with_stdin(&mut cmd, "s3cret").expect("run sh with stdin");
+        assert_eq!(String::from_utf8_lossy(&out.stdout), "s3cretargc=0\n");
+    }
+
     use super::*;
 
     // Real stderr captured from `bw` 2026.7.0 while testing this against a
