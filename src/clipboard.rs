@@ -112,12 +112,31 @@ fn cliphist_contains(text: &str) -> bool {
     String::from_utf8_lossy(&out.stdout).contains(text)
 }
 
+// `cliphist delete` reads entries from stdin; `delete-query` would put the secret in argv.
 fn cliphist_delete(text: &str) {
-    let _ = Command::new("cliphist")
-        .args(["delete-query", text])
+    let Ok(out) = Command::new("cliphist").arg("list").output() else {
+        return;
+    };
+    let matches: String = String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .filter(|l| l.contains(text))
+        .map(|l| format!("{l}\n"))
+        .collect();
+    if matches.is_empty() {
+        return;
+    }
+    if let Ok(mut child) = Command::new("cliphist")
+        .arg("delete")
+        .stdin(Stdio::piped())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
-        .status();
+        .spawn()
+    {
+        if let Some(mut stdin) = child.stdin.take() {
+            let _ = stdin.write_all(matches.as_bytes());
+        }
+        let _ = child.wait();
+    }
 }
 
 pub fn autoclear_note(secs: u64) -> String {
@@ -171,4 +190,31 @@ pub fn spawn_autoclear(secret: String, label: &'static str) {
             notify(&format!("🧹 Clipboard cleared ({label})."));
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Needs a real cliphist; touches only a unique canary entry.
+    #[test]
+    #[ignore]
+    fn cliphist_delete_removes_entry_without_secret_in_argv() {
+        let canary = format!("bw-tui-canary-{}", std::process::id());
+        let mut store = Command::new("cliphist")
+            .arg("store")
+            .stdin(Stdio::piped())
+            .spawn()
+            .expect("spawn cliphist store");
+        store
+            .stdin
+            .take()
+            .expect("cliphist stdin")
+            .write_all(canary.as_bytes())
+            .expect("write canary");
+        store.wait().expect("cliphist store");
+        assert!(cliphist_contains(&canary));
+        cliphist_delete(&canary);
+        assert!(!cliphist_contains(&canary));
+    }
 }
