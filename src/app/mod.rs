@@ -5,7 +5,6 @@ mod events;
 mod input;
 mod item_form;
 #[cfg(test)]
-#[allow(clippy::unwrap_used, reason = "unwrap-to-fail-fast is fine in tests")]
 mod tests;
 
 use crate::bw::{self, Folder, GenerateOptions, Item, Status};
@@ -303,15 +302,7 @@ impl App {
     }
 
     pub fn session_age(&self) -> u64 {
-        #[allow(
-            clippy::unwrap_used,
-            reason = "system clock is never before UNIX_EPOCH"
-        )]
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-        now.saturating_sub(self.session_started)
+        bw::now_secs().saturating_sub(self.session_started)
     }
 
     pub fn session_remaining(&self) -> u64 {

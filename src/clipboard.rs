@@ -51,14 +51,10 @@ pub fn copy(text: &str) -> Result<()> {
         .stdin(Stdio::piped())
         .spawn()
         .with_context(|| format!("could not run {program} ({hint})"))?;
-    #[allow(
-        clippy::unwrap_used,
-        reason = "stdin is guaranteed Some: Stdio::piped() was set above"
-    )]
     child
         .stdin
-        .as_mut()
-        .unwrap()
+        .take()
+        .with_context(|| format!("no stdin pipe for {program}"))?
         .write_all(text.as_bytes())
         .with_context(|| format!("could not write to {program}"))?;
     child.wait().with_context(|| format!("{program} failed"))?;

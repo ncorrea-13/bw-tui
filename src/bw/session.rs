@@ -25,14 +25,10 @@ fn session_time_file() -> PathBuf {
     cache_dir().join("session_time")
 }
 
-fn now_secs() -> u64 {
-    #[allow(
-        clippy::unwrap_used,
-        reason = "system clock is never before UNIX_EPOCH"
-    )]
+pub fn now_secs() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .unwrap()
+        .unwrap_or_default()
         .as_secs()
 }
 
