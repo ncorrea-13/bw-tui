@@ -4,7 +4,7 @@
 use super::commands::bw_command;
 use anyhow::{Context, Result};
 use std::io::Write;
-use std::os::unix::fs::PermissionsExt;
+use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt};
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -66,10 +66,43 @@ pub fn clear_cached_session() {
 pub fn save_session(key: &str) -> Result<u64> {
     let ts = now_secs();
     let path = session_file();
-    std::fs::create_dir_all(cache_dir()).context("could not create the cache directory")?;
-    let mut f = std::fs::File::create(&path).context("could not create the session file")?;
+    std::fs::DirBuilder::new()
+        .recursive(true)
+        .mode(0o700)
+        .create(cache_dir())
+        .context("could not create the cache directory")?;
+    // mode() applies at creation, so the token is never briefly world-readable.
+    let mut f = std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .open(&path)
+        .context("could not create the session file")?;
     f.set_permissions(std::fs::Permissions::from_mode(0o600))?;
     f.write_all(key.as_bytes())?;
     std::fs::write(session_time_file(), ts.to_string())?;
     Ok(ts)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn save_session_is_private_from_creation() {
+        let dir = std::env::temp_dir().join(format!("bw-tui-test-{}", std::process::id()));
+        // SAFETY: only test touching XDG_CACHE_HOME; no other thread reads it concurrently.
+        unsafe { std::env::set_var("XDG_CACHE_HOME", &dir) };
+        save_session("tok").expect("save session");
+        let mode =
+            |p: &std::path::Path| std::fs::metadata(p).expect("stat").permissions().mode() & 0o777;
+        assert_eq!(mode(&dir.join("bw-tui")), 0o700);
+        assert_eq!(mode(&session_file()), 0o600);
+        assert_eq!(
+            std::fs::read_to_string(session_file()).expect("read session"),
+            "tok"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }
