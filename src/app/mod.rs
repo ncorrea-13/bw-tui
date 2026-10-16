@@ -147,6 +147,7 @@ pub struct App {
     pub confirm_logout: bool,
     pub busy: bool,
     pub busy_label: Option<String>,
+    pub update_available: Option<String>,
     tick_count: u64,
     last_sync: Instant,
     pub auto_sync_running: bool,
@@ -187,6 +188,7 @@ impl App {
             confirm_logout: false,
             busy: false,
             busy_label: None,
+            update_available: None,
             tick_count: 0,
             last_sync: Instant::now(),
             auto_sync_running: false,
@@ -207,6 +209,9 @@ impl App {
     pub fn start(&mut self) {
         self.screen = Screen::Loading;
         self.spawn(|| BwEvent::Started(bw::compute_start()));
+        if config::get().check_updates {
+            self.spawn(|| BwEvent::UpdateChecked(crate::update::check()));
+        }
     }
 
     fn apply_start_outcome(&mut self, outcome: bw::StartOutcome) {
