@@ -31,7 +31,7 @@ pub(super) fn draw_vault_tab(frame: &mut Frame, app: &App, area: Rect) {
     draw_list(frame, app, list_rows[1]);
 
     if let Some(form) = &app.item_form {
-        super::item_form::draw_item_form_popup(frame, form, content_area);
+        super::item_form::draw_item_form_popup(frame, form, &app.folders, content_area);
     } else if app.detail_open
         && let Some(item) = app.selected_item()
     {

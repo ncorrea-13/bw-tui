@@ -175,6 +175,10 @@ impl App {
                         self.reveal_current_password_in_item_form();
                         return;
                     }
+                    if ctrl_char('f') {
+                        self.cycle_item_form_folder();
+                        return;
+                    }
                     if ctrl_char('t') {
                         self.cycle_item_kind(1);
                         return;
