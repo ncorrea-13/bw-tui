@@ -751,6 +751,20 @@ impl App {
         self.spawn(move || BwEvent::ItemDeleted(bw::delete_item(&id, &session).map(|()| id)));
     }
 
+    pub fn toggle_favorite(&mut self) {
+        if self.busy {
+            return;
+        }
+        let (Some(session), Some(item)) = (self.session.clone(), self.selected_item()) else {
+            return;
+        };
+        let (id, favorite) = (item.id.clone(), !item.favorite);
+        self.busy = true;
+        self.busy_label = Some("Saving item…".to_string());
+        self.auto_sync_stale = true;
+        self.spawn(move || BwEvent::ItemEdited(bw::set_favorite(&id, favorite, &session)));
+    }
+
     pub fn lock_now(&mut self) {
         self.relock("\u{f023} Vault locked, enter your master password:");
     }

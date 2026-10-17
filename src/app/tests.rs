@@ -16,6 +16,7 @@ fn item(name: &str, folder_id: Option<&str>) -> Item {
         fields: None,
         notes: None,
         folder_id: folder_id.map(str::to_string),
+        favorite: false,
     }
 }
 
@@ -403,4 +404,14 @@ fn deleted_item_leaves_the_list_and_closes_the_detail() {
 
     assert_eq!(app.items.len(), 1);
     assert!(!app.detail_open && !app.busy);
+}
+
+#[test]
+fn favorite_key_is_ignored_while_busy() {
+    let mut app = vault_app(vec![item("Alpha", None)], vec![]);
+    app.detail_open = true;
+    app.session = Some("s".to_string());
+    app.busy = true;
+    app.handle_key(key(KeyCode::Char('f')));
+    assert!(app.busy_label.is_none(), "must not queue a second write");
 }
