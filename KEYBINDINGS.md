@@ -40,6 +40,7 @@ Opened with `n` from the vault list, or `e` from the item detail popup. Which fi
 | ------------------- | ------------------------------------------ |
 | `Tab` / `Shift+Tab` | move to the next / previous field          |
 | `Ctrl+T`            | cycle item type                            |
+| `Ctrl+F`            | cycle the item's folder (new items start in the folder you're browsing) |
 | `Ctrl+G`            | open the password generator (login only)   |
 | `Ctrl+R`            | fetch and show the item's current password |
 | `Enter`             | save                                       |

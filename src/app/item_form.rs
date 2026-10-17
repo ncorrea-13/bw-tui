@@ -162,6 +162,7 @@ pub struct ItemForm {
     pub last_name: String,
     pub email: String,
     pub phone: String,
+    pub folder_id: Option<String>,
     pub generator_open: bool,
     pub error: Option<String>,
 }
@@ -187,6 +188,7 @@ impl ItemForm {
             last_name: String::new(),
             email: String::new(),
             phone: String::new(),
+            folder_id: None,
             generator_open: false,
             error: None,
         }
@@ -222,6 +224,7 @@ impl ItemForm {
                 .unwrap_or_default(),
             email: identity.and_then(|i| i.email.clone()).unwrap_or_default(),
             phone: identity.and_then(|i| i.phone.clone()).unwrap_or_default(),
+            folder_id: item.folder_id.clone(),
             generator_open: false,
             error: None,
         }
@@ -276,7 +279,27 @@ impl ItemForm {
 
 impl App {
     pub fn open_create_form(&mut self) {
-        self.item_form = Some(ItemForm::new());
+        let mut form = ItemForm::new();
+        form.folder_id = match self.folder_index {
+            0 | 1 => None,
+            i => self.folders.get(i - 2).and_then(|f| f.id.clone()),
+        };
+        self.item_form = Some(form);
+    }
+
+    pub fn cycle_item_form_folder(&mut self) {
+        let Some(form) = &mut self.item_form else {
+            return;
+        };
+        let pos = form
+            .folder_id
+            .as_ref()
+            .and_then(|id| self.folders.iter().position(|f| f.id.as_ref() == Some(id)));
+        form.folder_id = match pos {
+            None => self.folders.first(),
+            Some(i) => self.folders.get(i + 1),
+        }
+        .and_then(|f| f.id.clone());
     }
 
     pub fn open_edit_form(&mut self) {
@@ -367,6 +390,7 @@ impl App {
         let opt = |s: &str| (!s.is_empty()).then(|| s.to_string());
 
         let kind = form.kind;
+        let folder_id = form.folder_id.clone();
         let name = form.name.trim().to_string();
         let notes = opt(&form.notes);
         let login = matches!(kind, ItemKind::Login).then(|| bw::NewLogin {
@@ -410,7 +434,7 @@ impl App {
                 let patch = bw::ItemPatch {
                     name,
                     notes,
-                    folder_id: None,
+                    folder_id,
                     login,
                     card,
                     identity,
@@ -422,7 +446,7 @@ impl App {
                 let secure_note =
                     matches!(kind, ItemKind::Note).then_some(bw::SecureNoteData { note_type: 0 });
                 let new_item = bw::NewItem {
-                    folder_id: None,
+                    folder_id,
                     item_type: kind.item_type(),
                     name,
                     notes,

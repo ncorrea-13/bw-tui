@@ -340,6 +340,47 @@ fn manual_sync_is_dropped_when_locked() {
     assert!(!app.busy);
 }
 
+fn folder(id: &str) -> Folder {
+    Folder {
+        id: Some(id.to_string()),
+        name: id.to_string(),
+    }
+}
+
+#[test]
+fn form_folder_cycles_through_folders_and_back_to_none() {
+    let mut app = vault_app(vec![], vec![folder("a"), folder("b")]);
+    app.open_create_form();
+    let seen: Vec<Option<String>> = (0..3)
+        .map(|_| {
+            app.cycle_item_form_folder();
+            app.item_form.as_ref().and_then(|f| f.folder_id.clone())
+        })
+        .collect();
+    assert_eq!(seen, [Some("a".to_string()), Some("b".to_string()), None]);
+}
+
+#[test]
+fn editing_keeps_the_items_folder() {
+    let mut app = vault_app(vec![item("Alpha", Some("a"))], vec![folder("a")]);
+    app.open_edit_form();
+    assert_eq!(
+        app.item_form.as_ref().and_then(|f| f.folder_id.as_deref()),
+        Some("a")
+    );
+}
+
+#[test]
+fn new_item_starts_in_the_browsed_folder() {
+    let mut app = vault_app(vec![], vec![folder("a")]);
+    app.folder_index = 2;
+    app.open_create_form();
+    assert_eq!(
+        app.item_form.as_ref().and_then(|f| f.folder_id.as_deref()),
+        Some("a")
+    );
+}
+
 #[test]
 fn delete_needs_confirmation_and_any_other_key_cancels() {
     let mut app = vault_app(vec![item("Alpha", None)], vec![]);
