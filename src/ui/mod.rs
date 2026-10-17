@@ -154,6 +154,12 @@ fn draw_tab_bar(frame: &mut Frame, app: &App, area: Rect) {
             Style::default().fg(WARN),
         ));
     }
+    if let Some(tag) = &app.update_available {
+        right.push(Span::styled(
+            format!("{tag} available  "),
+            Style::default().fg(WARN),
+        ));
+    }
     right.push(Span::styled(
         format!("bw-tui v{}", env!("CARGO_PKG_VERSION")),
         Style::default().fg(ACCENT),
