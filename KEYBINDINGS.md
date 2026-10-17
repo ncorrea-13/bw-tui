@@ -29,6 +29,8 @@ Shows everything about the selected item: for a login, that's username/URL/TOTP 
 | `r`     | reveal secret                                                 |
 | `n`     | copy notes                                                    |
 | `e`     | edit item                                                     |
+| `d`     | move the item to the trash (asks for confirmation, `y` to confirm) |
+| `f`     | toggle favorite                                               |
 | `Esc`   | close the popup                                               |
 
 ## Create / edit item form
@@ -39,6 +41,7 @@ Opened with `n` from the vault list, or `e` from the item detail popup. Which fi
 | ------------------- | ------------------------------------------ |
 | `Tab` / `Shift+Tab` | move to the next / previous field          |
 | `Ctrl+T`            | cycle item type                            |
+| `Ctrl+F`            | cycle the item's folder (new items start in the folder you're browsing) |
 | `Ctrl+G`            | open the password generator (login only)   |
 | `Ctrl+R`            | fetch and show the item's current password |
 | `Enter`             | save                                       |

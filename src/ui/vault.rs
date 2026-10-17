@@ -31,7 +31,7 @@ pub(super) fn draw_vault_tab(frame: &mut Frame, app: &App, area: Rect) {
     draw_list(frame, app, list_rows[1]);
 
     if let Some(form) = &app.item_form {
-        super::item_form::draw_item_form_popup(frame, form, content_area);
+        super::item_form::draw_item_form_popup(frame, form, &app.folders, content_area);
     } else if app.detail_open
         && let Some(item) = app.selected_item()
     {
@@ -111,6 +111,10 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect) {
                 Span::styled(item.type_icon(), Style::default().fg(MUTED)),
                 Span::raw(" "),
                 Span::styled(
+                    if item.favorite { "\u{f005} " } else { "" },
+                    Style::default().fg(WARN),
+                ),
+                Span::styled(
                     item.name.clone(),
                     Style::default().add_modifier(Modifier::BOLD),
                 ),
@@ -143,7 +147,7 @@ fn draw_detail_popup(frame: &mut Frame, app: &App, item: &Item, area: Rect) {
     let lines = item_detail_lines(app, item);
 
     let width = 78u16.min(area.width.saturating_sub(2)).max(20);
-    let height = (lines.len() as u16 + 4).clamp(8, area.height.saturating_sub(2).max(8));
+    let height = (lines.len() as u16 + 5).clamp(8, area.height.saturating_sub(2).max(8));
     let rect = centered(area, width, height);
 
     frame.render_widget(Clear, rect);
@@ -160,11 +164,20 @@ fn draw_detail_popup(frame: &mut Frame, app: &App, item: &Item, area: Rect) {
 
     let rows = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(1), Constraint::Length(1)])
+        .constraints([Constraint::Min(1), Constraint::Length(2)])
         .split(inner);
     frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), rows[0]);
     frame.render_widget(
-        Paragraph::new(detail_footer(item)).style(Style::default().fg(MUTED)),
+        Paragraph::new(if app.confirm_delete {
+            format!(
+                "Move '{}' to the trash? y: yes  any other key: cancel",
+                item.name
+            )
+        } else {
+            detail_footer(item)
+        })
+        .style(Style::default().fg(if app.confirm_delete { WARN } else { MUTED }))
+        .wrap(Wrap { trim: false }),
         rows[1],
     );
 }
@@ -204,6 +217,12 @@ fn detail_footer(item: &Item) -> String {
     if matches!(item.item_type, 1..=4) {
         parts.push("e: edit");
     }
+    parts.push("d: delete");
+    parts.push(if item.favorite {
+        "f: unfavorite"
+    } else {
+        "f: favorite"
+    });
     parts.push("Esc: close");
     parts.join("  ")
 }

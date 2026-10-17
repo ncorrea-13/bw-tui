@@ -3,6 +3,7 @@
 
 use super::{ACCENT, BG, ERROR, MUTED, TEXT, centered};
 use crate::app::{ItemForm, ItemFormField, ItemFormMode, ItemKind};
+use crate::bw::Folder;
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
@@ -11,11 +12,16 @@ use ratatui::{
     widgets::{Block, Borders, Clear, Paragraph, Wrap},
 };
 
-pub(super) fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rect) {
+pub(super) fn draw_item_form_popup(
+    frame: &mut Frame,
+    form: &ItemForm,
+    folders: &[Folder],
+    area: Rect,
+) {
     let visible_fields = form.kind.fields();
 
     let plain_hint = "Tab: field  Enter: save  Esc: cancel";
-    let mut ctrl_hints: Vec<&str> = vec![];
+    let mut ctrl_hints: Vec<&str> = vec!["Ctrl+F: change folder"];
     if matches!(form.mode, ItemFormMode::Create) {
         ctrl_hints.push("Ctrl+T: change type");
     }
@@ -35,7 +41,7 @@ pub(super) fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rec
     } else {
         super::wrapped_line_count(ctrl_hint.chars().count(), inner_width)
     };
-    let height = (visible_fields.len() as u16 + 4 + plain_hint_lines + ctrl_hint_lines)
+    let height = (visible_fields.len() as u16 + 5 + plain_hint_lines + ctrl_hint_lines)
         .clamp(8, area.height.saturating_sub(2).max(8));
     let rect = centered(area, width, height);
 
@@ -56,7 +62,7 @@ pub(super) fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rec
     let inner = block.inner(rect);
     frame.render_widget(block, rect);
 
-    let mut constraints = vec![Constraint::Length(1); visible_fields.len()];
+    let mut constraints = vec![Constraint::Length(1); visible_fields.len() + 1];
     constraints.push(Constraint::Length(1));
     constraints.push(Constraint::Min(1));
     constraints.push(Constraint::Length(plain_hint_lines));
@@ -93,7 +99,17 @@ pub(super) fn draw_item_form_popup(frame: &mut Frame, form: &ItemForm, area: Rec
         frame.render_widget(Paragraph::new(text).style(style), rows[i]);
     }
 
-    let error_row = visible_fields.len();
+    let folder_name = form
+        .folder_id
+        .as_ref()
+        .and_then(|id| folders.iter().find(|f| f.id.as_ref() == Some(id)))
+        .map_or("No folder", |f| f.name.as_str());
+    frame.render_widget(
+        Paragraph::new(format!("Folder: {folder_name}")).style(Style::default().fg(MUTED)),
+        rows[visible_fields.len()],
+    );
+
+    let error_row = visible_fields.len() + 1;
     if let Some(err) = &form.error {
         frame.render_widget(
             Paragraph::new(format!("\u{f071} {err}")).style(Style::default().fg(ERROR)),

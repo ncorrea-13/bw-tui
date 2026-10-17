@@ -8,6 +8,7 @@ mod bw;
 mod clipboard;
 mod config;
 mod ui;
+mod update;
 
 use anyhow::Result;
 use app::App;

@@ -16,6 +16,7 @@ fn item(name: &str, folder_id: Option<&str>) -> Item {
         fields: None,
         notes: None,
         folder_id: folder_id.map(str::to_string),
+        favorite: false,
     }
 }
 
@@ -338,4 +339,79 @@ fn manual_sync_is_dropped_when_locked() {
 
     assert!(app.items.is_empty(), "locked vault must stay empty");
     assert!(!app.busy);
+}
+
+fn folder(id: &str) -> Folder {
+    Folder {
+        id: Some(id.to_string()),
+        name: id.to_string(),
+    }
+}
+
+#[test]
+fn form_folder_cycles_through_folders_and_back_to_none() {
+    let mut app = vault_app(vec![], vec![folder("a"), folder("b")]);
+    app.open_create_form();
+    let seen: Vec<Option<String>> = (0..3)
+        .map(|_| {
+            app.cycle_item_form_folder();
+            app.item_form.as_ref().and_then(|f| f.folder_id.clone())
+        })
+        .collect();
+    assert_eq!(seen, [Some("a".to_string()), Some("b".to_string()), None]);
+}
+
+#[test]
+fn editing_keeps_the_items_folder() {
+    let mut app = vault_app(vec![item("Alpha", Some("a"))], vec![folder("a")]);
+    app.open_edit_form();
+    assert_eq!(
+        app.item_form.as_ref().and_then(|f| f.folder_id.as_deref()),
+        Some("a")
+    );
+}
+
+#[test]
+fn new_item_starts_in_the_browsed_folder() {
+    let mut app = vault_app(vec![], vec![folder("a")]);
+    app.folder_index = 2;
+    app.open_create_form();
+    assert_eq!(
+        app.item_form.as_ref().and_then(|f| f.folder_id.as_deref()),
+        Some("a")
+    );
+}
+
+#[test]
+fn delete_needs_confirmation_and_any_other_key_cancels() {
+    let mut app = vault_app(vec![item("Alpha", None)], vec![]);
+    app.detail_open = true;
+
+    app.handle_key(key(KeyCode::Char('d')));
+    assert!(app.confirm_delete);
+    app.handle_key(key(KeyCode::Char('x')));
+    assert!(!app.confirm_delete);
+    assert!(!app.busy, "cancelling must not start a delete");
+}
+
+#[test]
+fn deleted_item_leaves_the_list_and_closes_the_detail() {
+    let mut app = vault_app(vec![item("Alpha", None), item("Beta", None)], vec![]);
+    app.detail_open = true;
+    app.busy = true;
+
+    app.apply_bw_event(BwEvent::ItemDeleted(Ok("Alpha".to_string())));
+
+    assert_eq!(app.items.len(), 1);
+    assert!(!app.detail_open && !app.busy);
+}
+
+#[test]
+fn favorite_key_is_ignored_while_busy() {
+    let mut app = vault_app(vec![item("Alpha", None)], vec![]);
+    app.detail_open = true;
+    app.session = Some("s".to_string());
+    app.busy = true;
+    app.handle_key(key(KeyCode::Char('f')));
+    assert!(app.busy_label.is_none(), "must not queue a second write");
 }

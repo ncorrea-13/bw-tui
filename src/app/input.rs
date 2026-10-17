@@ -175,6 +175,10 @@ impl App {
                         self.reveal_current_password_in_item_form();
                         return;
                     }
+                    if ctrl_char('f') {
+                        self.cycle_item_form_folder();
+                        return;
+                    }
                     if ctrl_char('t') {
                         self.cycle_item_kind(1);
                         return;
@@ -219,6 +223,10 @@ impl App {
                         _ => {}
                     }
                 }
+                VaultMode::Normal if self.detail_open && self.confirm_delete => match key.code {
+                    KeyCode::Char('y') | KeyCode::Char('Y') => self.delete_selected(),
+                    _ => self.confirm_delete = false,
+                },
                 VaultMode::Normal if self.detail_open => match key.code {
                     KeyCode::Esc => self.detail_open = false,
                     KeyCode::Char('q') => self.should_quit = true,
@@ -231,6 +239,8 @@ impl App {
                     KeyCode::Char('r') => self.toggle_reveal(),
                     KeyCode::Char('n') => self.copy_notes(),
                     KeyCode::Char('e') => self.open_edit_form(),
+                    KeyCode::Char('d') => self.confirm_delete = true,
+                    KeyCode::Char('f') => self.toggle_favorite(),
                     _ => {}
                 },
                 VaultMode::Normal => {
