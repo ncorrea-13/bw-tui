@@ -236,6 +236,7 @@ impl App {
                     KeyCode::Char('n') => self.copy_notes(),
                     KeyCode::Char('e') => self.open_edit_form(),
                     KeyCode::Char('d') => self.confirm_delete = true,
+                    KeyCode::Char('f') => self.toggle_favorite(),
                     _ => {}
                 },
                 VaultMode::Normal => {

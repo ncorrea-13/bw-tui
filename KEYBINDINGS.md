@@ -30,6 +30,7 @@ Shows everything about the selected item: for a login, that's username/URL/TOTP 
 | `n`     | copy notes                                                    |
 | `e`     | edit item                                                     |
 | `d`     | move the item to the trash (asks for confirmation, `y` to confirm) |
+| `f`     | toggle favorite                                               |
 | `Esc`   | close the popup                                               |
 
 ## Create / edit item form
