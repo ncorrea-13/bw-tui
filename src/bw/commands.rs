@@ -209,8 +209,21 @@ pub fn edit_item(id: &str, patch: &ItemPatch, session: &str) -> Result<Item> {
         }
     }
 
+    put_item(id, &raw_item, session)
+}
+
+pub fn set_favorite(id: &str, favorite: bool, session: &str) -> Result<Item> {
+    let mut raw_item = get_item(id, session)?;
+    raw_item
+        .as_object_mut()
+        .context("unexpected item shape from bw")?
+        .insert("favorite".to_string(), serde_json::json!(favorite));
+    put_item(id, &raw_item, session)
+}
+
+fn put_item(id: &str, raw_item: &serde_json::Value, session: &str) -> Result<Item> {
     let edited_item_json =
-        serde_json::to_string(&raw_item).context("could not encode the edited item")?;
+        serde_json::to_string(raw_item).context("could not encode the edited item")?;
     let edited_item_base64 = STANDARD.encode(edited_item_json);
     let out = run_with_stdin(
         bw_command()

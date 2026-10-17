@@ -111,6 +111,10 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect) {
                 Span::styled(item.type_icon(), Style::default().fg(MUTED)),
                 Span::raw(" "),
                 Span::styled(
+                    if item.favorite { "\u{f005} " } else { "" },
+                    Style::default().fg(WARN),
+                ),
+                Span::styled(
                     item.name.clone(),
                     Style::default().add_modifier(Modifier::BOLD),
                 ),
@@ -214,6 +218,11 @@ fn detail_footer(item: &Item) -> String {
         parts.push("e: edit");
     }
     parts.push("d: delete");
+    parts.push(if item.favorite {
+        "f: unfavorite"
+    } else {
+        "f: favorite"
+    });
     parts.push("Esc: close");
     parts.join("  ")
 }

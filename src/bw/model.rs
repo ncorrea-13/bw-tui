@@ -60,6 +60,8 @@ pub struct Item {
     pub notes: Option<String>,
     #[serde(rename = "folderId")]
     pub folder_id: Option<String>,
+    #[serde(default)]
+    pub favorite: bool,
 }
 
 impl Item {
