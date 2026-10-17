@@ -23,6 +23,7 @@ pub enum BwEvent {
     LoggedOut(anyhow::Result<bw::StartOutcome>),
     ItemCreated(anyhow::Result<bw::Item>),
     ItemEdited(anyhow::Result<bw::Item>),
+    ItemDeleted(anyhow::Result<String>),
     UpdateChecked(Option<String>),
 }
 
@@ -264,6 +265,21 @@ impl App {
                             form.error = Some(e.to_string());
                         }
                     }
+                }
+            }
+            BwEvent::ItemDeleted(result) => {
+                self.busy = false;
+                self.busy_label = None;
+                match result {
+                    Ok(id) => {
+                        self.items.retain(|i| i.id != id);
+                        self.refilter();
+                        self.detail_open = false;
+                        self.reveal = None;
+                        self.reveal_cvv = None;
+                        self.set_status("\u{f00c} Item moved to the trash");
+                    }
+                    Err(e) => self.set_status(format!("\u{f071} {e}")),
                 }
             }
         }

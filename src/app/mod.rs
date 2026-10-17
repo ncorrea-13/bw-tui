@@ -145,6 +145,7 @@ pub struct App {
     pub server_status: Option<Status>,
     pub generator: GeneratorState,
     pub confirm_logout: bool,
+    pub confirm_delete: bool,
     pub busy: bool,
     pub busy_label: Option<String>,
     pub update_available: Option<String>,
@@ -186,6 +187,7 @@ impl App {
                 error: None,
             },
             confirm_logout: false,
+            confirm_delete: false,
             busy: false,
             busy_label: None,
             update_available: None,
@@ -732,6 +734,21 @@ impl App {
         self.busy = true;
         self.busy_label = Some("Syncing…".to_string());
         self.spawn(move || BwEvent::Synced(bw::sync_and_refresh(&session)));
+    }
+
+    pub fn delete_selected(&mut self) {
+        self.confirm_delete = false;
+        if self.busy {
+            return;
+        }
+        let (Some(session), Some(item)) = (self.session.clone(), self.selected_item()) else {
+            return;
+        };
+        let id = item.id.clone();
+        self.busy = true;
+        self.busy_label = Some("Deleting item…".to_string());
+        self.auto_sync_stale = true;
+        self.spawn(move || BwEvent::ItemDeleted(bw::delete_item(&id, &session).map(|()| id)));
     }
 
     pub fn lock_now(&mut self) {

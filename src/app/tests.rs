@@ -339,3 +339,27 @@ fn manual_sync_is_dropped_when_locked() {
     assert!(app.items.is_empty(), "locked vault must stay empty");
     assert!(!app.busy);
 }
+
+#[test]
+fn delete_needs_confirmation_and_any_other_key_cancels() {
+    let mut app = vault_app(vec![item("Alpha", None)], vec![]);
+    app.detail_open = true;
+
+    app.handle_key(key(KeyCode::Char('d')));
+    assert!(app.confirm_delete);
+    app.handle_key(key(KeyCode::Char('x')));
+    assert!(!app.confirm_delete);
+    assert!(!app.busy, "cancelling must not start a delete");
+}
+
+#[test]
+fn deleted_item_leaves_the_list_and_closes_the_detail() {
+    let mut app = vault_app(vec![item("Alpha", None), item("Beta", None)], vec![]);
+    app.detail_open = true;
+    app.busy = true;
+
+    app.apply_bw_event(BwEvent::ItemDeleted(Ok("Alpha".to_string())));
+
+    assert_eq!(app.items.len(), 1);
+    assert!(!app.detail_open && !app.busy);
+}

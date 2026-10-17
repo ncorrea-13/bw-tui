@@ -143,7 +143,7 @@ fn draw_detail_popup(frame: &mut Frame, app: &App, item: &Item, area: Rect) {
     let lines = item_detail_lines(app, item);
 
     let width = 78u16.min(area.width.saturating_sub(2)).max(20);
-    let height = (lines.len() as u16 + 4).clamp(8, area.height.saturating_sub(2).max(8));
+    let height = (lines.len() as u16 + 5).clamp(8, area.height.saturating_sub(2).max(8));
     let rect = centered(area, width, height);
 
     frame.render_widget(Clear, rect);
@@ -160,11 +160,20 @@ fn draw_detail_popup(frame: &mut Frame, app: &App, item: &Item, area: Rect) {
 
     let rows = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(1), Constraint::Length(1)])
+        .constraints([Constraint::Min(1), Constraint::Length(2)])
         .split(inner);
     frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }), rows[0]);
     frame.render_widget(
-        Paragraph::new(detail_footer(item)).style(Style::default().fg(MUTED)),
+        Paragraph::new(if app.confirm_delete {
+            format!(
+                "Move '{}' to the trash? y: yes  any other key: cancel",
+                item.name
+            )
+        } else {
+            detail_footer(item)
+        })
+        .style(Style::default().fg(if app.confirm_delete { WARN } else { MUTED }))
+        .wrap(Wrap { trim: false }),
         rows[1],
     );
 }
@@ -204,6 +213,7 @@ fn detail_footer(item: &Item) -> String {
     if matches!(item.item_type, 1..=4) {
         parts.push("e: edit");
     }
+    parts.push("d: delete");
     parts.push("Esc: close");
     parts.join("  ")
 }
