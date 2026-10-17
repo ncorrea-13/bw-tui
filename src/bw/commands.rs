@@ -231,6 +231,25 @@ pub fn edit_item(id: &str, patch: &ItemPatch, session: &str) -> Result<Item> {
     serde_json::from_slice(&out.stdout).context("could not parse the edited item")
 }
 
+pub fn delete_item(id: &str, session: &str) -> Result<()> {
+    let out = bw_command()
+        .args(["delete", "item", id])
+        .env("BW_SESSION", session)
+        .stdin(Stdio::null())
+        .output()
+        .context("could not run `bw delete item`")?;
+    if !out.status.success() {
+        bail!(
+            "could not delete the item: {}",
+            friendly_error(&String::from_utf8_lossy(&out.stderr))
+        );
+    }
+    if session_expired(&out.stderr) {
+        bail!("session expired, unlock the vault again");
+    }
+    Ok(())
+}
+
 pub fn get_totp(id: &str, session: &str) -> Result<String> {
     let out = bw_command()
         .args(["get", "totp", id])

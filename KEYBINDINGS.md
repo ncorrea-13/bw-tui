@@ -29,6 +29,7 @@ Shows everything about the selected item: for a login, that's username/URL/TOTP 
 | `r`     | reveal secret                                                 |
 | `n`     | copy notes                                                    |
 | `e`     | edit item                                                     |
+| `d`     | move the item to the trash (asks for confirmation, `y` to confirm) |
 | `Esc`   | close the popup                                               |
 
 ## Create / edit item form

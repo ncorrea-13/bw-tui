@@ -379,4 +379,26 @@ fn new_item_starts_in_the_browsed_folder() {
         app.item_form.as_ref().and_then(|f| f.folder_id.as_deref()),
         Some("a")
     );
+#[test]
+fn delete_needs_confirmation_and_any_other_key_cancels() {
+    let mut app = vault_app(vec![item("Alpha", None)], vec![]);
+    app.detail_open = true;
+
+    app.handle_key(key(KeyCode::Char('d')));
+    assert!(app.confirm_delete);
+    app.handle_key(key(KeyCode::Char('x')));
+    assert!(!app.confirm_delete);
+    assert!(!app.busy, "cancelling must not start a delete");
+}
+
+#[test]
+fn deleted_item_leaves_the_list_and_closes_the_detail() {
+    let mut app = vault_app(vec![item("Alpha", None), item("Beta", None)], vec![]);
+    app.detail_open = true;
+    app.busy = true;
+
+    app.apply_bw_event(BwEvent::ItemDeleted(Ok("Alpha".to_string())));
+
+    assert_eq!(app.items.len(), 1);
+    assert!(!app.detail_open && !app.busy);
 }

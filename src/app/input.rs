@@ -223,6 +223,10 @@ impl App {
                         _ => {}
                     }
                 }
+                VaultMode::Normal if self.detail_open && self.confirm_delete => match key.code {
+                    KeyCode::Char('y') | KeyCode::Char('Y') => self.delete_selected(),
+                    _ => self.confirm_delete = false,
+                },
                 VaultMode::Normal if self.detail_open => match key.code {
                     KeyCode::Esc => self.detail_open = false,
                     KeyCode::Char('q') => self.should_quit = true,
@@ -235,6 +239,7 @@ impl App {
                     KeyCode::Char('r') => self.toggle_reveal(),
                     KeyCode::Char('n') => self.copy_notes(),
                     KeyCode::Char('e') => self.open_edit_form(),
+                    KeyCode::Char('d') => self.confirm_delete = true,
                     _ => {}
                 },
                 VaultMode::Normal => {
