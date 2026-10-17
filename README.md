@@ -123,6 +123,7 @@ Both versions create and use the same config file: `~/.config/bw-tui/config.json
   "session_max_age_secs": 1800,
   "clipboard_clear_secs": 9,
   "auto_sync_secs": 0,
+  "check_updates": true,
   "generator": {
     "length": 20,
     "uppercase": true,
@@ -137,6 +138,7 @@ Both versions create and use the same config file: `~/.config/bw-tui/config.json
 - `session_max_age_secs`: Time for the auto-lock background job to wait before locking the vault again.
 - `clipboard_clear_secs`: How long a secret stays on the clipboard before it gets wiped.
 - `auto_sync_secs`: Sync with the server every N seconds while the vault is open and idle. `0` disables it, minimum effective value is 60. Auto-syncs are silent unless they fail.
+- `check_updates`: On start, ask the GitHub releases API (via `curl`) if there's a newer version and show it in the header. It only notifies, it never installs. Set to `false` to disable the request.
 - `generator`: the Generator tab's starting options. You can still change them per-session from the tab itself.
 
 ## Status

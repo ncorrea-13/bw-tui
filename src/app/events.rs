@@ -23,12 +23,14 @@ pub enum BwEvent {
     LoggedOut(anyhow::Result<bw::StartOutcome>),
     ItemCreated(anyhow::Result<bw::Item>),
     ItemEdited(anyhow::Result<bw::Item>),
+    UpdateChecked(Option<String>),
 }
 
 impl App {
     pub(super) fn apply_bw_event(&mut self, event: BwEvent) {
         match event {
             BwEvent::Started(outcome) => self.apply_start_outcome(outcome),
+            BwEvent::UpdateChecked(tag) => self.update_available = tag,
             BwEvent::ServerConfigured { url, result } => match result {
                 Ok(()) => {
                     self.screen = Screen::Login {
