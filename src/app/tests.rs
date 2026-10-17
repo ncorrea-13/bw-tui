@@ -379,6 +379,8 @@ fn new_item_starts_in_the_browsed_folder() {
         app.item_form.as_ref().and_then(|f| f.folder_id.as_deref()),
         Some("a")
     );
+}
+
 #[test]
 fn delete_needs_confirmation_and_any_other_key_cancels() {
     let mut app = vault_app(vec![item("Alpha", None)], vec![]);
